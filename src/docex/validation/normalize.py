@@ -36,7 +36,13 @@ _TEXTUAL = re.compile(r"^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})$")
 
 
 def _is_thousands(parts: list[str]) -> bool:
-    return len(parts) > 1 and all(len(p) == 3 for p in parts[1:]) and 1 <= len(parts[0]) <= 3
+    """`1.234.567` groups; a leading `0` group (`0.005`) is a decimal, not thousands."""
+    return (
+        len(parts) > 1
+        and parts[0] != "0"
+        and 1 <= len(parts[0]) <= 3
+        and all(len(p) == 3 for p in parts[1:])
+    )
 
 
 def parse_number(value: str | int | float | Decimal | None) -> Decimal | None:

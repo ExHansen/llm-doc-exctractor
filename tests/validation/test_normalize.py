@@ -90,3 +90,15 @@ def test_npwp():
 def test_normalize_text():
     assert normalize_text("  PT.  Maju   Jaya, ") == "pt. maju jaya"
     assert normalize_text(None) == ""
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [("0.005", "0.005"), ("0.500", "0.500"), ("0,250", "0.250"), ("0.008", "0.008")],
+)
+def test_leading_zero_group_is_decimal_not_thousands(raw, expected):
+    assert parse_number(raw) == Decimal(expected)
+
+
+def test_rate_with_trailing_zero():
+    assert parse_rate("0.110") == Decimal("0.11")
