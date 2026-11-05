@@ -1,4 +1,4 @@
-# Extraction QC report: run `20261105-201655-mock`
+# Extraction QC report: run `20261105-203727-mock`
 
 > **Simulated extractor.** These numbers come from the offline mock provider, which returns ground truth with injected LLM/OCR-style errors. They measure the QC pipeline (validation, confidence, routing), not a real model.
 
@@ -7,12 +7,12 @@
 | Metric | Value | Meaning |
 |---|---|---|
 | Documents | 40 | Documents in the run. |
-| Automation rate | 25.0% | Share of documents auto-approved. |
+| Automation rate | 22.5% | Share of documents auto-approved. |
 | Auto-approved accuracy | 100.0% | Share of auto-approved documents whose critical fields are all correct. |
 | Error catch rate | 100.0% | Share of documents with a wrong critical field that were sent to review. |
 | Fault catch rate | 100.0% | Share of documents with a printed fault (wrong total, bad NPWP...) sent to review. |
 | Document accuracy | 65.0% | Share of documents with every critical field correct. |
-| Line-item F1 | 87.4% | Line items extracted with every field correct. |
+| Line-item F1 | 85.6% | Line items extracted with every field correct. |
 
 Review threshold: **0.70** (document confidence).
 
@@ -55,19 +55,19 @@ Review threshold: **0.70** (document confidence).
 |---|---|---|---|
 | clean | 25 | 32.0% | 68.0% |
 | scan_heavy | 7 | 0.0% | 57.1% |
-| scan_light | 8 | 25.0% | 62.5% |
+| scan_light | 8 | 12.5% | 62.5% |
 
 ### By source
 
 | source | n | Automation rate | Document accuracy |
 |---|---|---|---|
-| synthetic | 40 | 25.0% | 65.0% |
+| synthetic | 40 | 22.5% | 65.0% |
 
 ### By template
 
 | template | n | Automation rate | Document accuracy |
 |---|---|---|---|
-| klasik | 17 | 29.4% | 64.7% |
+| klasik | 17 | 23.5% | 64.7% |
 | minimal | 10 | 30.0% | 60.0% |
 | modern | 13 | 15.4% | 69.2% |
 
@@ -79,25 +79,25 @@ Raising the threshold sends more documents to review and makes the auto-approved
 
 | Threshold | Automation rate | Auto-approved accuracy |
 |---|---|---|
-| 0.05 | 37.5% | 93.3% |
-| 0.10 | 37.5% | 93.3% |
-| 0.15 | 37.5% | 93.3% |
-| 0.20 | 37.5% | 93.3% |
-| 0.25 | 37.5% | 93.3% |
-| 0.30 | 37.5% | 93.3% |
-| 0.35 | 37.5% | 93.3% |
-| 0.40 | 37.5% | 93.3% |
-| 0.45 | 25.0% | 100.0% |
-| 0.50 | 25.0% | 100.0% |
-| 0.55 | 25.0% | 100.0% |
-| 0.60 | 25.0% | 100.0% |
-| 0.65 | 25.0% | 100.0% |
-| 0.70 | 25.0% | 100.0% |
-| 0.75 | 25.0% | 100.0% |
-| 0.80 | 25.0% | 100.0% |
-| 0.85 | 25.0% | 100.0% |
-| 0.90 | 25.0% | 100.0% |
-| 0.95 | 25.0% | 100.0% |
+| 0.05 | 35.0% | 92.9% |
+| 0.10 | 35.0% | 92.9% |
+| 0.15 | 35.0% | 92.9% |
+| 0.20 | 35.0% | 92.9% |
+| 0.25 | 35.0% | 92.9% |
+| 0.30 | 35.0% | 92.9% |
+| 0.35 | 35.0% | 92.9% |
+| 0.40 | 35.0% | 92.9% |
+| 0.45 | 22.5% | 100.0% |
+| 0.50 | 22.5% | 100.0% |
+| 0.55 | 22.5% | 100.0% |
+| 0.60 | 22.5% | 100.0% |
+| 0.65 | 22.5% | 100.0% |
+| 0.70 | 22.5% | 100.0% |
+| 0.75 | 22.5% | 100.0% |
+| 0.80 | 22.5% | 100.0% |
+| 0.85 | 22.5% | 100.0% |
+| 0.90 | 22.5% | 100.0% |
+| 0.95 | 22.5% | 100.0% |
 
 ## Calibration
 

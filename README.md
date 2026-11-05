@@ -82,7 +82,7 @@ Every setting can be changed through `DOCEX_*` environment variables or a `.env`
 
 | Dataset | Docs | Automation rate | Auto-approved accuracy | Error catch rate | Fault catch rate | Document accuracy | Line-item F1 |
 |---|---|---|---|---|---|---|---|
-| Synthetic invoices (`docex demo`) | 40 | 25.0% | **100%** | **100%** | **100%** | 65.0% | 87.4% |
+| Synthetic invoices (`docex demo`) | 40 | 22.5% | **100%** | **100%** | **100%** | 65.0% | 85.6% |
 | CORD receipts (`--source cord`) | 50 | 72.0% | **100%** | **100%** | n/a | 92.0% | 88.9% |
 
 What these say:
@@ -92,8 +92,8 @@ What these say:
   amount), went to the review queue.
 - **The router is conservative.** On invoices it also sends correct documents to review, mostly
   because a line item failed a rule or the two extraction attempts disagreed. The trade-off curve
-  shows the price of automating more: at threshold 0.30 automation rises to 37.5% and
-  auto-approved accuracy falls to 93.3%.
+  shows the price of automating more: at threshold 0.30 automation rises to 35.0% and
+  auto-approved accuracy falls to 92.9%.
 - **Confidence is under-confident, which is safe:** fields scored around 0.5 were right 96% of
   the time. That is the first thing to tune once a real model is plugged in.
 
@@ -211,7 +211,7 @@ catches exceptions, so one bad file never stops a run.
 ## Development
 
 ```bash
-uv run pytest            # 179 tests, no network needed
+uv run pytest            # 186 tests, no network needed
 uv run ruff check
 uv run ruff format --check
 ```
