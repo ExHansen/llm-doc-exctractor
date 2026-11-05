@@ -10,6 +10,7 @@ from rich.progress import Progress
 from rich.table import Table
 
 from docex.config import Settings
+from docex.datasets import cord
 from docex.evaluation.metrics import EvalResult, build_records, evaluate
 from docex.evaluation.report import METRIC_ROWS, pct, write_report
 from docex.pipeline import RunSummary, run_pipeline
@@ -129,6 +130,29 @@ def print_headline(result: EvalResult, path: Path) -> None:
     if result.simulated:
         console.print(f"[yellow]{SIMULATED_NOTICE}[/yellow]")
     console.print(f"Report: {path}")
+
+
+@app.command("fetch-cord")
+def fetch_cord(n: int = typer.Option(50, help="Number of CORD receipts to register.")) -> None:
+    """Download real Indonesian receipts (CORD v2 test split) and register them."""
+    settings = Settings()
+    try:
+        with console.status("Downloading CORD v2 test split..."):
+            parquet = cord.download_cord_test_split()
+            rows = cord.load_cord_rows(parquet, n)
+    except Exception as exc:  # noqa: BLE001 - any network/HF error gets the same advice
+        console.print(
+            f"Could not download CORD ({exc}). Check your internet connection and retry; "
+            "the synthetic dataset still works.",
+            markup=False,
+            soft_wrap=True,
+        )
+        raise typer.Exit(1) from exc
+    metas = cord.materialize_cord(rows, settings.data_dir)
+    with Store(settings.resolved_db_path) as store:
+        store.upsert_documents(metas)
+    console.print(f"Registered {len(metas)} receipts in {settings.data_dir / 'documents' / 'cord'}")
+    console.print(cord.CORD_ATTRIBUTION, markup=False, soft_wrap=True)
 
 
 @app.command("eval")
