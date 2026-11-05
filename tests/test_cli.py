@@ -37,3 +37,31 @@ def test_run_unknown_provider_exits_2():
     runner.invoke(app, ["generate", "--n", "2"])
     r = runner.invoke(app, ["run", "--provider", "nope"])
     assert r.exit_code == 2 and "Available: mock" in r.output
+
+
+def test_eval_without_runs_exits_1():  # Review Focus #4
+    r = runner.invoke(app, ["eval"])
+    assert r.exit_code == 1 and "docex run" in r.output
+
+
+def test_eval_unknown_run_exits_1():
+    runner.invoke(app, ["generate", "--n", "2"])
+    runner.invoke(app, ["run"])
+    r = runner.invoke(app, ["eval", "--run", "nope"])
+    assert r.exit_code == 1 and "nope" in r.output
+
+
+def test_eval_latest_run_writes_report(tmp_path):
+    runner.invoke(app, ["generate", "--n", "4"])
+    runner.invoke(app, ["run"])
+    r = runner.invoke(app, ["eval"])
+    assert r.exit_code == 0, r.output
+    reports = list((tmp_path / "reports").glob("*/report.md"))
+    assert len(reports) == 1 and "Automation rate" in r.output
+
+
+def test_demo_end_to_end(tmp_path):
+    r = runner.invoke(app, ["demo", "--n", "8"])
+    assert r.exit_code == 0, r.output
+    assert list((tmp_path / "reports").glob("*/report.md"))
+    assert "simulated extractor" in r.output

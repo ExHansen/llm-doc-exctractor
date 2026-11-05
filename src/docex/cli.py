@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import typer
 from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
 
 from docex.config import Settings
+from docex.evaluation.metrics import EvalResult, build_records, evaluate
+from docex.evaluation.report import METRIC_ROWS, pct, write_report
 from docex.pipeline import RunSummary, run_pipeline
 from docex.providers.registry import get_provider
 from docex.storage import Store
@@ -33,10 +37,7 @@ def generate(
     """Create synthetic Indonesian invoice PDFs with ground truth."""
     settings = Settings()
     seed = settings.seed if seed is None else seed
-    with console.status(f"Rendering {n} invoices..."):
-        metas = generate_dataset(n, seed, faulty_rate, scan_rate, settings.data_dir)
-    with Store(settings.resolved_db_path) as store:
-        store.upsert_documents(metas)
+    metas = create_invoices(settings, n, seed, faulty_rate, scan_rate)
     faulty = sum(1 for m in metas if m.injected_faults)
     scanned = sum(1 for m in metas if m.quality != "clean")
     console.print(
@@ -89,6 +90,69 @@ def run(
     if provider:
         settings = settings.model_copy(update={"provider": provider})
     print_summary(execute_run(settings, source, limit))
+
+
+def create_invoices(settings: Settings, n: int, seed: int, faulty_rate: float, scan_rate: float):
+    with console.status(f"Rendering {n} invoices..."):
+        metas = generate_dataset(n, seed, faulty_rate, scan_rate, settings.data_dir)
+    with Store(settings.resolved_db_path) as store:
+        store.upsert_documents(metas)
+    return metas
+
+
+def evaluate_run(settings: Settings, run_id: str | None) -> tuple[EvalResult, Path]:
+    with Store(settings.resolved_db_path) as store:
+        run_id = run_id or store.latest_run_id()
+        if run_id is None:
+            console.print("No runs found. Run `docex run` first.")
+            raise typer.Exit(1)
+        config = store.get_run_config(run_id)
+        if config is None:
+            console.print(f"Run '{run_id}' not found. Known runs: see `docex run` output.")
+            raise typer.Exit(1)
+        records = build_records(store, run_id, settings.data_dir)
+        simulated = store.run_simulated(run_id)
+    result = evaluate(records, run_id, simulated)
+    threshold = config.get("review_threshold", settings.review_threshold)
+    path = write_report(result, settings.reports_dir / run_id, threshold)
+    return result, path
+
+
+def print_headline(result: EvalResult, path: Path) -> None:
+    table = Table(title=f"Evaluation of {result.run_id}")
+    table.add_column("metric")
+    table.add_column("value", justify="right")
+    for label, key, _ in METRIC_ROWS:
+        value = getattr(result, key)
+        table.add_row(label, str(value) if key == "n_docs" else pct(value))
+    console.print(table)
+    if result.simulated:
+        console.print(f"[yellow]{SIMULATED_NOTICE}[/yellow]")
+    console.print(f"Report: {path}")
+
+
+@app.command("eval")
+def eval_command(
+    run: str | None = typer.Option(None, "--run", help="Run id (default: the latest run)."),
+) -> None:
+    """Score a run against ground truth and write a Markdown report with charts."""
+    result, path = evaluate_run(Settings(), run)
+    print_headline(result, path)
+
+
+@app.command()
+def demo(n: int = typer.Option(40, help="Invoices to generate if none exist yet.")) -> None:
+    """Generate (if needed), run and evaluate in one go."""
+    settings = Settings()
+    with Store(settings.resolved_db_path) as store:
+        has_docs = bool(store.list_documents(source="synthetic", limit=1))
+    if not has_docs:
+        metas = create_invoices(settings, n, settings.seed, 0.15, 0.3)
+        console.print(f"Generated {len(metas)} synthetic invoices.")
+    summary = execute_run(settings)
+    print_summary(summary)
+    result, path = evaluate_run(settings, summary.run_id)
+    print_headline(result, path)
 
 
 if __name__ == "__main__":  # pragma: no cover

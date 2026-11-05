@@ -114,3 +114,10 @@ def test_store_releases_file_after_close(tmp_path):  # Review Focus #2
     with Store(p) as s2:
         assert len(s2.list_documents()) == 1
     p.unlink()  # fails on Windows if a handle is still open
+
+
+def test_run_config(tmp_path):
+    with Store(tmp_path / "d.duckdb") as s:
+        rid = s.create_run("mock", "mock-v1", {"review_threshold": 0.6})
+        assert s.get_run_config(rid) == {"review_threshold": 0.6}
+        assert s.get_run_config("missing") is None

@@ -140,6 +140,10 @@ class Store:
             [datetime.now(), n_docs, status, run_id],
         )
 
+    def get_run_config(self, run_id: str) -> dict | None:
+        row = self._con.execute("SELECT config FROM runs WHERE run_id = ?", [run_id]).fetchone()
+        return None if row is None else _load(row[0])
+
     def latest_run_id(self) -> str | None:
         row = self._con.execute(
             "SELECT run_id FROM runs ORDER BY started_at DESC, run_id DESC LIMIT 1"
