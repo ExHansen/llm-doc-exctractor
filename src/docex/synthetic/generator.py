@@ -8,11 +8,13 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from faker import Faker
 
-from docex.schemas import Invoice, InvoiceLineItem
+from docex.groundtruth import GroundTruth, write_ground_truth
+from docex.schemas import DocumentMeta, Invoice, InvoiceLineItem, Quality
 from docex.synthetic.catalog import (
     DATE_FORMATS,
     INVOICE_NUMBER_FORMATS,
@@ -175,3 +177,47 @@ def make_invoice(seed: int, index: int, faulty: bool) -> SyntheticInvoice:
         total=total,
     )
     return SyntheticInvoice(f"inv-{index:04d}", invoice, layout, tax_scheme, faults)
+
+
+def generate_dataset(
+    n: int, seed: int, faulty_rate: float, scan_rate: float, data_dir: Path
+) -> list[DocumentMeta]:
+    """Write n invoice PDFs plus ground truth under data_dir and return their metadata."""
+    from docex.synthetic.degrade import degrade_pdf
+    from docex.synthetic.templates import render_invoice_pdf
+
+    rng = random.Random(f"{seed}:dataset")
+    metas: list[DocumentMeta] = []
+    for index in range(1, n + 1):
+        faulty_roll, scan_roll, level_roll = rng.random(), rng.random(), rng.random()
+        quality: Quality = "clean"
+        if scan_roll < scan_rate:
+            quality = "scan_light" if level_roll < 0.5 else "scan_heavy"
+        si = make_invoice(seed, index, faulty_roll < faulty_rate)
+        doc_rel = f"documents/synthetic/{si.doc_id}.pdf"
+        gt_rel = f"ground_truth/{si.doc_id}.json"
+        doc_path = data_dir / doc_rel
+        if quality == "clean":
+            render_invoice_pdf(si, doc_path)
+        else:
+            clean_path = doc_path.with_name(f"{si.doc_id}.clean.pdf")
+            render_invoice_pdf(si, clean_path)
+            degrade_pdf(clean_path, doc_path, quality, random.Random(f"{seed}:degrade:{index}"))
+            clean_path.unlink()
+        gt = GroundTruth(
+            si.doc_id, "invoice", "synthetic", si.invoice.model_dump(mode="json"), si.faults
+        )
+        write_ground_truth(data_dir / gt_rel, gt)
+        metas.append(
+            DocumentMeta(
+                si.doc_id,
+                "invoice",
+                "synthetic",
+                doc_rel,
+                quality,
+                si.layout.template,
+                si.faults,
+                gt_rel,
+            )
+        )
+    return metas
