@@ -1,0 +1,218 @@
+{
+  "auto_approved_accuracy": 1.0,
+  "automation_rate": 0.25,
+  "breakdown": {
+    "quality": {
+      "clean": {
+        "automation_rate": 0.32,
+        "doc_accuracy": 0.68,
+        "n": 25
+      },
+      "scan_heavy": {
+        "automation_rate": 0.0,
+        "doc_accuracy": 0.5714,
+        "n": 7
+      },
+      "scan_light": {
+        "automation_rate": 0.25,
+        "doc_accuracy": 0.625,
+        "n": 8
+      }
+    },
+    "source": {
+      "synthetic": {
+        "automation_rate": 0.25,
+        "doc_accuracy": 0.65,
+        "n": 40
+      }
+    },
+    "template": {
+      "klasik": {
+        "automation_rate": 0.2941,
+        "doc_accuracy": 0.6471,
+        "n": 17
+      },
+      "minimal": {
+        "automation_rate": 0.3,
+        "doc_accuracy": 0.6,
+        "n": 10
+      },
+      "modern": {
+        "automation_rate": 0.1538,
+        "doc_accuracy": 0.6923,
+        "n": 13
+      }
+    }
+  },
+  "calibration": [
+    {
+      "accuracy": 0.0,
+      "bin_high": 0.1,
+      "bin_low": 0.0,
+      "mean_confidence": 0.0,
+      "n": 5
+    },
+    {
+      "accuracy": 0.0,
+      "bin_high": 0.2,
+      "bin_low": 0.1,
+      "mean_confidence": 0.1067,
+      "n": 3
+    },
+    {
+      "accuracy": 0.5,
+      "bin_high": 0.3,
+      "bin_low": 0.2,
+      "mean_confidence": 0.225,
+      "n": 2
+    },
+    {
+      "accuracy": 0.7857,
+      "bin_high": 0.5,
+      "bin_low": 0.4,
+      "mean_confidence": 0.4,
+      "n": 14
+    },
+    {
+      "accuracy": 0.9615,
+      "bin_high": 0.6,
+      "bin_low": 0.5,
+      "mean_confidence": 0.5,
+      "n": 26
+    },
+    {
+      "accuracy": 0.9776,
+      "bin_high": 1.0,
+      "bin_low": 0.9,
+      "mean_confidence": 1.0,
+      "n": 223
+    }
+  ],
+  "doc_accuracy": 0.65,
+  "error_catch_rate": 1.0,
+  "fault_catch_by_type": {
+    "due_before_issue": 1.0,
+    "invalid_npwp": 1.0,
+    "line_amount_mismatch": 1.0,
+    "total_mismatch": 1.0
+  },
+  "fault_catch_rate": 1.0,
+  "field_accuracy": {
+    "buyer_name": 0.975,
+    "buyer_npwp": 1.0,
+    "discount": 0.95,
+    "due_date": 0.875,
+    "invoice_date": 0.85,
+    "invoice_number": 0.9,
+    "seller_name": 0.95,
+    "seller_npwp": 0.925,
+    "subtotal": 0.925,
+    "tax_amount": 0.875,
+    "tax_base": 0.95,
+    "tax_rate": 0.9,
+    "total": 0.95
+  },
+  "item_f1": 0.8742,
+  "item_precision": 0.9068,
+  "item_recall": 0.8439,
+  "n_docs": 40,
+  "run_id": "20261105-201655-mock",
+  "simulated": true,
+  "tradeoff": [
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.05
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.1
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.15
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.2
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.25
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.3
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.35
+    },
+    {
+      "auto_approved_accuracy": 0.9333,
+      "automation_rate": 0.375,
+      "threshold": 0.4
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.45
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.5
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.55
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.6
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.65
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.7
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.75
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.8
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.85
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.9
+    },
+    {
+      "auto_approved_accuracy": 1.0,
+      "automation_rate": 0.25,
+      "threshold": 0.95
+    }
+  ]
+}
