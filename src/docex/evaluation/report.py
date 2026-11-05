@@ -205,9 +205,16 @@ def write_report(result: EvalResult, out_dir: Path, threshold: float | None = No
              for name, g in groups.items()],
         ))  # fmt: skip
 
-    md += ["", "## Threshold trade-off", "",
-           "Raising the threshold sends more documents to review and makes the auto-approved "
-           "set more accurate.", "", "![Threshold trade-off](threshold_tradeoff.png)", ""]  # fmt: skip
+    md += [
+        "",
+        "## Threshold trade-off",
+        "",
+        "Raising the threshold sends more documents to review and makes the auto-approved "
+        "set more accurate.",
+        "",
+        "![Threshold trade-off](threshold_tradeoff.png)",
+        "",
+    ]
     md.append(_table(
         ["Threshold", "Automation rate", "Auto-approved accuracy"],
         [[f"{r['threshold']:.2f}", pct(r["automation_rate"]), pct(r["auto_approved_accuracy"])]
