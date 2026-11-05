@@ -39,3 +39,26 @@ def test_review_app_approve_advances_and_saves(tmp_path):
 
     with Store(tmp_path / "docex.duckdb") as st:
         assert len(st.get_reviews(st.latest_run_id())) == 1
+
+
+def test_review_app_reports_busy_database(tmp_path):
+    import subprocess
+    import sys
+
+    runner.invoke(app, ["generate", "--n", "1"])
+    runner.invoke(app, ["run"])
+    holder = subprocess.Popen(
+        [sys.executable, "-c",
+         "import duckdb, sys, time; c = duckdb.connect(sys.argv[1]); "
+         "print('locked', flush=True); time.sleep(120)",
+         str(tmp_path / "docex.duckdb")],
+        stdout=subprocess.PIPE, text=True,
+    )  # fmt: skip
+    try:
+        assert holder.stdout.readline().strip() == "locked"
+        at = AppTest.from_file(str(REVIEW_APP), default_timeout=60).run()
+        assert not at.exception
+        assert "busy" in at.error[0].value
+    finally:
+        holder.kill()
+        holder.wait()

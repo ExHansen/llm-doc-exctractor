@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
+import duckdb
 import pandas as pd
 import streamlit as st
 
@@ -14,10 +18,24 @@ from docex.storage import Store
 st.set_page_config(page_title="docex review", layout="wide")
 settings = Settings()
 
+DB_BUSY = (
+    "The database is busy, probably because `docex run` is still writing to it. "
+    "Refresh this page in a moment."
+)
 
-def store() -> Store:
+
+@contextmanager
+def store() -> Iterator[Store]:
     # A fresh connection per read/write, so `docex run` can use the database meanwhile.
-    return Store(settings.resolved_db_path)
+    try:
+        s = Store(settings.resolved_db_path)
+    except duckdb.IOException:
+        st.error(DB_BUSY)
+        st.stop()
+    try:
+        yield s
+    finally:
+        s.close()
 
 
 with store() as s:
