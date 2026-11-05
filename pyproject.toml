@@ -1,0 +1,49 @@
+[project]
+name = "llm-doc-extractor"
+version = "0.1.0"
+description = "Document extraction QC pipeline: extract, validate, score confidence, route to human review, and evaluate."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=2.0.0",
+    "faker>=40.44.0",
+    "huggingface-hub>=2.4.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.4.6",
+    "pillow>=13.0.0",
+    "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
+    "pypdfium2>=5.14.0",
+    "rapidfuzz>=3.14.6",
+    "reportlab>=5.1.0",
+    "rich>=15.0.0",
+    "streamlit>=1.66.1",
+    "typer>=0.27.3",
+]
+
+[project.scripts]
+docex = "docex.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/docex"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]

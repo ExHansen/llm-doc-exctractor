@@ -72,6 +72,7 @@ class InvoiceLineItem(BaseModel):
     unit_price: Decimal
     amount: Decimal
 
+
 class Invoice(BaseModel):
     doc_type: Literal["invoice"] = "invoice"
     invoice_number: str
@@ -85,15 +86,17 @@ class Invoice(BaseModel):
     line_items: list[InvoiceLineItem]
     subtotal: Decimal
     discount: Decimal = Decimal("0")
-    tax_base: Decimal          # DPP
-    tax_rate: Decimal          # 0.11 atau 0.12
-    tax_amount: Decimal        # PPN
+    tax_base: Decimal  # DPP
+    tax_rate: Decimal  # 0.11 atau 0.12
+    tax_amount: Decimal  # PPN
     total: Decimal
+
 
 class ReceiptItem(BaseModel):
     name: str
     quantity: Decimal | None = None
-    price: Decimal | None = None      # harga total baris
+    price: Decimal | None = None  # harga total baris
+
 
 class Receipt(BaseModel):
     doc_type: Literal["receipt"] = "receipt"
@@ -116,13 +119,13 @@ class Receipt(BaseModel):
 ```python
 @dataclass(frozen=True)
 class DocumentMeta:
-    doc_id: str                 # mis. "inv-0007", "cord-0012"
+    doc_id: str  # mis. "inv-0007", "cord-0012"
     doc_type: Literal["invoice", "receipt"]
     source: Literal["synthetic", "cord"]
-    path: Path                  # PDF atau gambar
+    path: Path  # PDF atau gambar
     quality: Literal["clean", "scan_light", "scan_heavy", "photo"]
-    template: str | None        # nama template sintetis
-    injected_faults: tuple[str, ...]   # kesalahan yang sengaja ada DI DOKUMEN
+    template: str | None  # nama template sintetis
+    injected_faults: tuple[str, ...]  # kesalahan yang sengaja ada DI DOKUMEN
     gt_path: Path
 ```
 
@@ -168,12 +171,16 @@ Ground truth menyimpan **nilai yang tercetak di dokumen**, bukan nilai yang "seh
 ```python
 class ExtractionProvider(Protocol):
     name: str
-    def extract(self, doc: DocumentMeta, schema: type[BaseModel], attempt: int) -> ExtractionResult: ...
+
+    def extract(
+        self, doc: DocumentMeta, schema: type[BaseModel], attempt: int
+    ) -> ExtractionResult: ...
+
 
 @dataclass
 class ExtractionResult:
     status: Literal["ok", "failed"]
-    data: dict | None            # output mentah sebelum validasi skema
+    data: dict | None  # output mentah sebelum validasi skema
     error: str | None
     latency_ms: float
     input_tokens: int | None

@@ -125,23 +125,33 @@ Expected: `uv sync` succeeds.
 # tests/test_schemas.py
 def test_invoice_requires_line_items_and_totals():
     with pytest.raises(ValidationError):
-        Invoice(invoice_number="INV/1", invoice_date=date(2026, 11, 5), seller_name="PT A",
-                buyer_name="PT B", line_items=[], subtotal=Decimal("0"))  # missing tax/total
+        Invoice(
+            invoice_number="INV/1",
+            invoice_date=date(2026, 11, 5),
+            seller_name="PT A",
+            buyer_name="PT B",
+            line_items=[],
+            subtotal=Decimal("0"),
+        )  # missing tax/total
+
 
 def test_draft_accepts_partial_data():
     d = InvoiceDraft(total=Decimal("1000.00"))
     assert d.invoice_number is None and d.line_items == [] and d.doc_type == "invoice"
+
 
 def test_field_kinds_cover_required_and_critical():
     for t in ("invoice", "receipt"):
         assert set(REQUIRED_FIELDS[t]) <= set(FIELD_KINDS[t])
         assert set(CRITICAL_FIELDS[t]) <= set(FIELD_KINDS[t])
 
+
 # tests/test_groundtruth.py
 def test_ground_truth_roundtrip(tmp_path):
     gt = GroundTruth("inv-0001", "invoice", "synthetic", {"total": "1000.00"}, ("total_mismatch",))
     write_ground_truth(tmp_path / "g.json", gt)
     assert read_ground_truth(tmp_path / "g.json") == gt
+
 
 # tests/test_config.py
 def test_settings_env_override(monkeypatch, tmp_path):
@@ -206,40 +216,61 @@ Invalid calendar dates raise `ParseError`.
 - [ ] **Step 1: Write failing tests**
 
 ```python
-@pytest.mark.parametrize("raw,expected", [
-    ("Rp 1.234.567,00", "1234567.00"), ("1.234.567", "1234567"), ("1,234,567", "1234567"),
-    ("IDR 1,234,567.50", "1234567.50"), ("@15.000", "15000"), ("x2", "2"), ("12.5", "12.5"),
-    ("1,5", "1.5"), ("-5,000", "-5000"), (1500, "1500"), ("", None), (None, None),
-])
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("Rp 1.234.567,00", "1234567.00"),
+        ("1.234.567", "1234567"),
+        ("1,234,567", "1234567"),
+        ("IDR 1,234,567.50", "1234567.50"),
+        ("@15.000", "15000"),
+        ("x2", "2"),
+        ("12.5", "12.5"),
+        ("1,5", "1.5"),
+        ("-5,000", "-5000"),
+        (1500, "1500"),
+        ("", None),
+        (None, None),
+    ],
+)
 def test_parse_number(raw, expected):
     assert parse_number(raw) == (Decimal(expected) if expected else None)
+
 
 @pytest.mark.parametrize("raw", ["12a.000", "1.2.3,4,5", "abc"])
 def test_parse_number_rejects_garbage(raw):
     with pytest.raises(ParseError):
         parse_number(raw)
 
-@pytest.mark.parametrize("raw", ["05 November 2026", "05/11/2026", "2026-11-05", "5 Nov 2026",
-                                 "5 nov 2026", "05-11-2026"])
+
+@pytest.mark.parametrize(
+    "raw",
+    ["05 November 2026", "05/11/2026", "2026-11-05", "5 Nov 2026", "5 nov 2026", "05-11-2026"],
+)
 def test_parse_date_variants(raw):
     assert parse_date(raw) == date(2026, 11, 5)
+
 
 def test_parse_date_indonesian_month():
     assert parse_date("17 Agustus 2026") == date(2026, 8, 17)
     assert parse_date("3 Okt 2026") == date(2026, 10, 3)
 
+
 def test_parse_date_invalid_calendar():
     with pytest.raises(ParseError):
         parse_date("31/02/2026")
+
 
 def test_rates():
     assert parse_rate("11%") == Decimal("0.11") and parse_rate("0.12") == Decimal("0.12")
     assert parse_rate(12) == Decimal("0.12")
 
+
 def test_npwp():
     assert npwp_digits("01.234.567.8-901.000") == "012345678901000"
     assert is_valid_npwp("012345678901000") and is_valid_npwp("0123456789012345")
     assert not is_valid_npwp("01234567890100")
+
 
 def test_normalize_text():
     assert normalize_text("  PT.  Maju   Jaya, ") == "pt. maju jaya"
@@ -315,50 +346,74 @@ Build a helper `clean_invoice_raw()` in the test module:
 
 ```python
 TODAY = date(2026, 11, 5)
-def failed(outcome): return {r.rule_id for r in outcome.results if not r.passed}
+
+
+def failed(outcome):
+    return {r.rule_id for r in outcome.results if not r.passed}
+
 
 def test_clean_invoice_passes_everything():
     assert failed(validate(clean_invoice_raw(), "invoice", TODAY)) == set()
 
-@pytest.mark.parametrize("mutate,rule", [
-    (lambda d: d.update(total="999.00"), "R06"),
-    (lambda d: d.update(tax_amount="12000.00"), "R05"),
-    (lambda d: d["line_items"][0].update(amount="46000.00"), "R02"),
-    (lambda d: d.update(subtotal="90000.00", tax_base="90000.00", tax_amount="9900.00",
-                        total="99900.00"), "R03"),
-    (lambda d: d.update(seller_npwp="01.234.567.8-901.00"), "R07"),
-    (lambda d: d.update(due_date="2026-10-01"), "R09"),
-    (lambda d: d.update(tax_rate="0.10", tax_amount="10000.00", total="110000.00"), "R10"),
-    (lambda d: d.update(invoice_date="31/02/2026"), "R00_parse"),
-    (lambda d: d.update(invoice_number=None), "R01"),
-])
+
+@pytest.mark.parametrize(
+    "mutate,rule",
+    [
+        (lambda d: d.update(total="999.00"), "R06"),
+        (lambda d: d.update(tax_amount="12000.00"), "R05"),
+        (lambda d: d["line_items"][0].update(amount="46000.00"), "R02"),
+        (
+            lambda d: d.update(
+                subtotal="90000.00", tax_base="90000.00", tax_amount="9900.00", total="99900.00"
+            ),
+            "R03",
+        ),
+        (lambda d: d.update(seller_npwp="01.234.567.8-901.00"), "R07"),
+        (lambda d: d.update(due_date="2026-10-01"), "R09"),
+        (lambda d: d.update(tax_rate="0.10", tax_amount="10000.00", total="110000.00"), "R10"),
+        (lambda d: d.update(invoice_date="31/02/2026"), "R00_parse"),
+        (lambda d: d.update(invoice_number=None), "R01"),
+    ],
+)
 def test_each_rule_fires(mutate, rule):
-    raw = clean_invoice_raw(); mutate(raw)
+    raw = clean_invoice_raw()
+    mutate(raw)
     assert rule in failed(validate(raw, "invoice", TODAY))
+
 
 def test_dpp_nilai_lain_scheme_passes():
     raw = clean_invoice_raw()
     raw.update(tax_base="91667.00", tax_rate="0.12", tax_amount="11000.00", total="111000.00")
     assert failed(validate(raw, "invoice", TODAY)) == set()
 
+
 def test_r09_is_hard_and_r04_is_soft():
-    raw = clean_invoice_raw(); raw.update(due_date="2026-10-01", tax_base="95000.00",
-                                          tax_amount="10450.00", total="110450.00")
+    raw = clean_invoice_raw()
+    raw.update(due_date="2026-10-01", tax_base="95000.00", tax_amount="10450.00", total="110450.00")
     sev = {r.rule_id: r.severity for r in validate(raw, "invoice", TODAY).results if not r.passed}
     assert sev == {"R09": "hard", "R04": "soft"}
 
+
 def test_unparseable_value_keeps_other_fields():
-    raw = clean_invoice_raw(); raw["total"] = "12a.000"
+    raw = clean_invoice_raw()
+    raw["total"] = "12a.000"
     out = validate(raw, "invoice", TODAY)
     assert out.draft.total is None and out.draft.subtotal == Decimal("100000.00")
 
+
 def test_receipt_rules_are_soft_except_total():
-    raw = {"items": [{"name": "Es Teh", "quantity": "2", "price": "10000"}],
-           "subtotal": "10000", "total": "11000", "cash": "20000", "change": "8000"}
+    raw = {
+        "items": [{"name": "Es Teh", "quantity": "2", "price": "10000"}],
+        "subtotal": "10000",
+        "total": "11000",
+        "cash": "20000",
+        "change": "8000",
+    }
     res = {r.rule_id: r for r in validate(raw, "receipt", TODAY).results}
     assert not res["R22"].passed and res["R22"].severity == "soft"
     assert not res["R23"].passed
     assert validate({"items": []}, "receipt", TODAY).results[0].rule_id in {"R01", "R20"}
+
 
 def test_receipt_negative_item_price_is_not_r11():
     raw = {"items": [{"name": "Diskon", "price": "-5000"}], "total": "0"}
@@ -418,17 +473,22 @@ Message: `feat: add validation rules R00-R23 with shared result types`.
 
 ```python
 TODAY = date(2026, 11, 5)
+
+
 def hard_failures(si):
     out = validate(si.invoice.model_dump(mode="json"), "invoice", TODAY)
     return {r.rule_id for r in out.results if not r.passed and r.severity == "hard"}
+
 
 def test_deterministic():
     assert make_invoice(42, 7, False) == make_invoice(42, 7, False)
     assert make_invoice(42, 7, False) != make_invoice(43, 7, False)
 
-def test_clean_invoices_pass_all_hard_rules():          # Review Focus #3
+
+def test_clean_invoices_pass_all_hard_rules():  # Review Focus #3
     bad = [i for i in range(300) if hard_failures(make_invoice(42, i, False))]
     assert bad == []
+
 
 def test_each_fault_triggers_its_rule():
     seen = set()
@@ -438,6 +498,7 @@ def test_each_fault_triggers_its_rule():
         assert FAULT_RULE[fault] in hard_failures(si), (i, fault)
         seen.add(fault)
     assert seen == set(FAULT_TYPES)
+
 
 def test_variety():
     sis = [make_invoice(42, i, False) for i in range(200)]
@@ -502,10 +563,12 @@ Message: `feat: generate synthetic Indonesian invoices with fault injection`.
 def test_amount_roundtrip(style, value):
     assert parse_number(format_amount(Decimal(value), style)) == Decimal(value)
 
+
 @pytest.mark.parametrize("fmt", DATE_FORMATS)
 def test_date_roundtrip(fmt):
     for d in (date(2026, 11, 5), date(2025, 8, 17), date(2026, 1, 31)):
         assert parse_date(format_date(d, fmt)) == d
+
 
 def test_rendered_pdf_contains_invoice_number(tmp_path):
     si = make_invoice(42, 1, False)
@@ -515,6 +578,7 @@ def test_rendered_pdf_contains_invoice_number(tmp_path):
     text = pdf[0].get_textpage().get_text_range()
     assert si.invoice.invoice_number in text
 
+
 def test_degraded_pdf_is_image_only(tmp_path):
     render_invoice_pdf(make_invoice(42, 1, False), tmp_path / "a.pdf")
     degrade_pdf(tmp_path / "a.pdf", tmp_path / "b.pdf", "scan_heavy", random.Random(1))
@@ -522,13 +586,16 @@ def test_degraded_pdf_is_image_only(tmp_path):
     assert pdf[0].get_textpage().get_text_range().strip() == ""
     assert render_first_page(tmp_path / "b.pdf").mode == "RGB"
 
+
 def test_generate_dataset_files_and_determinism(tmp_path):
     a = generate_dataset(6, 42, 0.5, 0.5, tmp_path / "a")
     b = generate_dataset(6, 42, 0.5, 0.5, tmp_path / "b")
     assert [m.doc_id for m in a] == [f"inv-{i:04d}" for i in range(1, 7)]
     for m in a:
         assert (tmp_path / "a" / m.path).exists() and not Path(m.path).is_absolute()
-        assert (tmp_path / "a" / m.gt_path).read_bytes() == (tmp_path / "b" / m.gt_path).read_bytes()
+        assert (tmp_path / "a" / m.gt_path).read_bytes() == (
+            tmp_path / "b" / m.gt_path
+        ).read_bytes()
     assert {m.quality for m in a} <= {"clean", "scan_light", "scan_heavy"}
 ```
 
@@ -583,27 +650,36 @@ Message: `feat: render invoice PDFs in 3 templates with scan degradation`.
 - [ ] **Step 1: Write failing tests**
 
 ```python
-def sample_result(doc) -> DocResult:  # helper: 1 ok extraction, 1 failed rule, 2 scores, review route
+def sample_result(
+    doc,
+) -> DocResult:  # helper: 1 ok extraction, 1 failed rule, 2 scores, review route
     ...
+
 
 def test_documents_roundtrip(tmp_path):
     with Store(tmp_path / "d.duckdb") as s:
-        s.upsert_documents([META]); s.upsert_documents([META])
+        s.upsert_documents([META])
+        s.upsert_documents([META])
         assert s.list_documents() == [META]
+
 
 def test_run_ids_unique_within_same_second(tmp_path):
     now = datetime(2026, 11, 5, 9, 30, 0)
     with Store(tmp_path / "d.duckdb") as s:
-        a = s.create_run("mock", "mock-v1", {}, now); b = s.create_run("mock", "mock-v1", {}, now)
+        a = s.create_run("mock", "mock-v1", {}, now)
+        b = s.create_run("mock", "mock-v1", {}, now)
     assert a == "20261105-093000-mock" and b == "20261105-093000-mock-2"
+
 
 def test_doc_result_roundtrip(tmp_path):
     with Store(tmp_path / "d.duckdb") as s:
-        s.upsert_documents([META]); rid = s.create_run("mock", "mock-v1", {})
+        s.upsert_documents([META])
+        rid = s.create_run("mock", "mock-v1", {})
         s.save_doc_result(rid, sample_result(META))
         d = s.get_doc_detail(rid, META.doc_id)
         assert d["decision"].route == "needs_review" and d["rules"][0].rule_id == "R06"
         assert s.get_decisions(rid)[0]["reasons"] == list(d["decision"].reasons)
+
 
 def test_review_latest_wins(tmp_path):
     with Store(tmp_path / "d.duckdb") as s:
@@ -611,10 +687,13 @@ def test_review_latest_wins(tmp_path):
         s.save_review("r1", "inv-0001", "correct", {"total": "1.00"})
         assert s.get_reviews("r1")["inv-0001"]["action"] == "correct"
 
-def test_store_releases_file_after_close(tmp_path):   # Review Focus #2
+
+def test_store_releases_file_after_close(tmp_path):  # Review Focus #2
     p = tmp_path / "d.duckdb"
-    with Store(p) as s: s.upsert_documents([META])
-    with Store(p) as s2: assert len(s2.list_documents()) == 1
+    with Store(p) as s:
+        s.upsert_documents([META])
+    with Store(p) as s2:
+        assert len(s2.list_documents()) == 1
     p.unlink()  # fails on Windows if a handle is still open
 ```
 
@@ -684,17 +763,26 @@ Fixture `invoice_doc(tmp_path, quality)`: writes `make_invoice(42, 1, False)` gr
 def test_zero_error_returns_ground_truth(tmp_path):
     doc = invoice_doc(tmp_path, "clean")
     r = MockProvider(tmp_path, base_error_rate=0, failure_rate=0).extract(doc, Invoice, 1)
-    assert r.status == "ok" and r.simulated and r.data == read_ground_truth(tmp_path / doc.gt_path).data
+    assert (
+        r.status == "ok"
+        and r.simulated
+        and r.data == read_ground_truth(tmp_path / doc.gt_path).data
+    )
+
 
 def test_deterministic(tmp_path):
-    doc = invoice_doc(tmp_path, "scan_heavy"); m = MockProvider(tmp_path, base_error_rate=0.3)
+    doc = invoice_doc(tmp_path, "scan_heavy")
+    m = MockProvider(tmp_path, base_error_rate=0.3)
     assert m.extract(doc, Invoice, 1).data == m.extract(doc, Invoice, 1).data
 
+
 def test_error_rate_scales_with_quality():
-    rng = random.Random(0); gt = make_invoice(42, 1, False).invoice.model_dump(mode="json")
+    rng = random.Random(0)
+    gt = make_invoice(42, 1, False).invoice.model_dump(mode="json")
     clean = sum(len(corrupt(gt, "invoice", 0.03 * 1.0, rng)[1]) for _ in range(400))
     heavy = sum(len(corrupt(gt, "invoice", 0.03 * 3.0, rng)[1]) for _ in range(400))
     assert heavy > 2 * clean > 0
+
 
 def test_correlation_one_repeats_errors(tmp_path):
     doc = invoice_doc(tmp_path, "scan_heavy")
@@ -705,10 +793,12 @@ def test_correlation_one_repeats_errors(tmp_path):
         if k != "line_items" and v != gt.get(k):
             assert a2[k] == v
 
+
 def test_correlation_zero_differs_somewhere(tmp_path):
     docs = [invoice_doc_n(tmp_path, i, "scan_heavy") for i in range(1, 11)]
     m = MockProvider(tmp_path, base_error_rate=0.3, consistency_correlation=0.0, failure_rate=0)
     assert any(m.extract(d, Invoice, 1).data != m.extract(d, Invoice, 2).data for d in docs)
+
 
 def test_failure_and_missing_gt(tmp_path):
     doc = invoice_doc(tmp_path, "clean")
@@ -716,6 +806,7 @@ def test_failure_and_missing_gt(tmp_path):
     (tmp_path / doc.gt_path).unlink()
     r = MockProvider(tmp_path, failure_rate=0).extract(doc, Invoice, 1)
     assert r.status == "failed" and doc.gt_path.split("/")[-1] in r.error
+
 
 def test_registry(tmp_path):
     assert get_provider("mock", Settings(data_dir=tmp_path)).name == "mock"
@@ -779,32 +870,42 @@ def test_clean_doc_scores_one():
     scores = score_fields("invoice", out, [out.draft])
     assert all(s.confidence == 1.0 for s in scores) and doc_confidence("invoice", scores) == 1.0
 
+
 def test_hard_rule_halves_involved_fields():
-    raw = clean_invoice_raw(); raw["total"] = "999.00"
+    raw = clean_invoice_raw()
+    raw["total"] = "999.00"
     s = {x.field: x for x in score_fields("invoice", validate(raw, "invoice", TODAY), [])}
     assert s["total"].confidence == 0.5 and s["subtotal"].confidence == 0.5
     assert s["seller_name"].confidence == 1.0 and "R06 failed" in s["total"].reasons
 
+
 def test_invalid_npwp_is_format_penalty_only():
-    raw = clean_invoice_raw(); raw["seller_npwp"] = "123"
+    raw = clean_invoice_raw()
+    raw["seller_npwp"] = "123"
     s = {x.field: x for x in score_fields("invoice", validate(raw, "invoice", TODAY), [])}
     assert s["seller_npwp"].confidence == 0.3
 
+
 def test_disagreement_penalty():
     a = validate(clean_invoice_raw(), "invoice", TODAY)
-    raw_b = clean_invoice_raw(); raw_b["seller_name"] = "PT Lain"
+    raw_b = clean_invoice_raw()
+    raw_b["seller_name"] = "PT Lain"
     b = validate(raw_b, "invoice", TODAY)
     s = {x.field: x for x in score_fields("invoice", a, [b.draft])}
     assert s["seller_name"].confidence == 0.4 and doc_confidence("invoice", list(s.values())) == 0.4
 
+
 def test_missing_required_is_zero():
-    raw = clean_invoice_raw(); raw["invoice_number"] = None
+    raw = clean_invoice_raw()
+    raw["invoice_number"] = None
     s = {x.field: x for x in score_fields("invoice", validate(raw, "invoice", TODAY), [])}
     assert s["invoice_number"].confidence == 0.0
+
 
 def test_receipt_subtotal_ignored_when_absent():
     out = validate({"items": [], "total": "5000"}, "receipt", TODAY)
     assert doc_confidence("receipt", score_fields("receipt", out, [])) == 1.0
+
 
 # tests/test_routing.py
 def test_route_auto_and_reasons():
@@ -875,6 +976,7 @@ def test_pipeline_end_to_end(tmp_path):
         assert summary.n_docs == 10 and summary.n_auto + summary.n_review == 10
         assert summary.simulated and len(st.get_decisions(summary.run_id)) == 10
 
+
 def test_perfect_extractor_routes_exactly_the_faulty_docs(tmp_path):
     s = Settings(data_dir=tmp_path, mock_base_error_rate=0.0, mock_failure_rate=0.0)
     docs = generate_dataset(20, 42, 0.3, 0.3, tmp_path)
@@ -883,23 +985,32 @@ def test_perfect_extractor_routes_exactly_the_faulty_docs(tmp_path):
         rid = run_pipeline(st, get_provider("mock", s), docs, s, date(2026, 11, 5)).run_id
         routes = {d["doc_id"]: d["route"] for d in st.get_decisions(rid)}
     assert any(d.injected_faults for d in docs)
-    assert routes == {d.doc_id: ("needs_review" if d.injected_faults else "auto_approved")
-                      for d in docs}
+    assert routes == {
+        d.doc_id: ("needs_review" if d.injected_faults else "auto_approved") for d in docs
+    }
 
-def test_exception_in_one_doc_does_not_stop_run(tmp_path, monkeypatch): ...
+
+def test_exception_in_one_doc_does_not_stop_run(tmp_path, monkeypatch):
+    ...
     # monkeypatch provider.extract to raise for doc #2 -> that doc failed+needs_review, others processed
 
-# tests/test_cli.py (CliRunner, env DOCEX_DATA_DIR=tmp_path)
-def test_generate_twice_is_idempotent(tmp_path, monkeypatch):     # Review Focus #1
-    runner.invoke(app, ["generate", "--n", "5"]); runner.invoke(app, ["generate", "--n", "5"])
-    with Store(tmp_path / "docex.duckdb") as st: assert len(st.list_documents()) == 5
 
-def test_run_without_documents_exits_1(tmp_path, monkeypatch):    # Review Focus #4
+# tests/test_cli.py (CliRunner, env DOCEX_DATA_DIR=tmp_path)
+def test_generate_twice_is_idempotent(tmp_path, monkeypatch):  # Review Focus #1
+    runner.invoke(app, ["generate", "--n", "5"])
+    runner.invoke(app, ["generate", "--n", "5"])
+    with Store(tmp_path / "docex.duckdb") as st:
+        assert len(st.list_documents()) == 5
+
+
+def test_run_without_documents_exits_1(tmp_path, monkeypatch):  # Review Focus #4
     r = runner.invoke(app, ["run"])
     assert r.exit_code == 1 and "docex generate" in r.output
 
+
 def test_run_prints_run_id_and_simulated_notice(tmp_path, monkeypatch):
-    runner.invoke(app, ["generate", "--n", "4"]); r = runner.invoke(app, ["run"])
+    runner.invoke(app, ["generate", "--n", "4"])
+    r = runner.invoke(app, ["run"])
     assert r.exit_code == 0 and "-mock" in r.output and "simulated extractor" in r.output
 ```
 
@@ -983,39 +1094,67 @@ def test_field_match_rules():
     assert field_match("npwp", "01.234.567.8-901.000", "012345678901000")
     assert field_match("date", None, None) and not field_match("date", "2026-11-05", None)
 
+
 def test_match_items_counts():
-    gt = [{"description": "Kertas A4", "quantity": "2", "unit_price": "50000.00", "amount": "100000.00"},
-          {"description": "Tinta", "quantity": "1", "unit_price": "75000.00", "amount": "75000.00"}]
+    gt = [
+        {
+            "description": "Kertas A4",
+            "quantity": "2",
+            "unit_price": "50000.00",
+            "amount": "100000.00",
+        },
+        {"description": "Tinta", "quantity": "1", "unit_price": "75000.00", "amount": "75000.00"},
+    ]
     pred = [gt[0], {**gt[1], "amount": "7500.00"}]
     assert match_items("invoice", pred, gt) == (1, 1, 1)
 
+
 # metrics: hand-built records
 def test_routing_metrics():
-    recs = [rec("a", route="auto_approved", conf=0.9, correct=True),
-            rec("b", route="auto_approved", conf=0.8, correct=False),
-            rec("c", route="needs_review", conf=0.3, correct=False, faults=("total_mismatch",),
-                hard_failed=True),
-            rec("d", route="needs_review", conf=0.5, correct=True)]
+    recs = [
+        rec("a", route="auto_approved", conf=0.9, correct=True),
+        rec("b", route="auto_approved", conf=0.8, correct=False),
+        rec(
+            "c",
+            route="needs_review",
+            conf=0.3,
+            correct=False,
+            faults=("total_mismatch",),
+            hard_failed=True,
+        ),
+        rec("d", route="needs_review", conf=0.5, correct=True),
+    ]
     r = evaluate(recs, "r1", True)
     assert r.automation_rate == 0.5 and r.auto_approved_accuracy == 0.5
     assert r.error_catch_rate == 0.5 and r.fault_catch_rate == 1.0
     t = {row["threshold"]: row for row in r.tradeoff}
     assert t[0.85]["automation_rate"] == 0.25 and t[0.85]["auto_approved_accuracy"] == 1.0
 
+
 def test_empty_denominators_are_none():
     r = evaluate([rec("a", route="needs_review", conf=0.1, correct=True)], "r1", True)
     assert r.auto_approved_accuracy is None and r.fault_catch_rate is None
 
+
 # report + CLI
 def test_report_files(tmp_path):
     path = write_report(evaluate([...], "r1", True), tmp_path)
-    for f in ("report.md", "metrics.json", "field_accuracy.png", "accuracy_by_quality.png",
-              "threshold_tradeoff.png", "calibration.png"):
+    for f in (
+        "report.md",
+        "metrics.json",
+        "field_accuracy.png",
+        "accuracy_by_quality.png",
+        "threshold_tradeoff.png",
+        "calibration.png",
+    ):
         assert (tmp_path / f).exists()
     assert "Simulated extractor" in path.read_text(encoding="utf-8")
 
-def test_eval_without_runs_exits_1(tmp_path, monkeypatch):        # Review Focus #4
-    r = runner.invoke(app, ["eval"]); assert r.exit_code == 1 and "docex run" in r.output
+
+def test_eval_without_runs_exits_1(tmp_path, monkeypatch):  # Review Focus #4
+    r = runner.invoke(app, ["eval"])
+    assert r.exit_code == 1 and "docex run" in r.output
+
 
 def test_demo_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setenv("DOCEX_REPORTS_DIR", str(tmp_path / "reports"))
@@ -1078,18 +1217,25 @@ Fixture `cord_parquet(tmp_path)`: build 2 rows with DuckDB, e.g. `COPY (SELECT {
 
 ```python
 def test_normalize_cord_gt():
-    data, issues = normalize_cord_gt({"menu": {"nm": "Es Teh", "cnt": "2", "price": "10.000"},
-                                      "total": {"total_price": ["10.000", "10.000"]}})
+    data, issues = normalize_cord_gt(
+        {
+            "menu": {"nm": "Es Teh", "cnt": "2", "price": "10.000"},
+            "total": {"total_price": ["10.000", "10.000"]},
+        }
+    )
     assert data["items"][0] == {"name": "Es Teh", "quantity": "2", "price": "10000.00"}
     assert data["total"] == "10000.00" and issues == ["total: multiple values"]
+
 
 def test_unparseable_value_is_issue():
     data, issues = normalize_cord_gt({"menu": [], "total": {"total_price": "abc"}})
     assert data["total"] is None and issues == ["total: unparseable 'abc'"]
 
+
 def test_discount_is_absolute():
     data, _ = normalize_cord_gt({"menu": [], "sub_total": {"discount_price": "-5,000"}})
     assert data["discount"] == "5000.00"
+
 
 def test_materialize_and_run(tmp_path, cord_parquet):
     metas = materialize_cord(load_cord_rows(cord_parquet, 2), tmp_path)
@@ -1101,8 +1247,11 @@ def test_materialize_and_run(tmp_path, cord_parquet):
         assert summary.n_docs == 2
         assert len(build_records(st, summary.run_id, tmp_path)) == 2
 
+
 def test_fetch_cord_offline_message(tmp_path, monkeypatch):
-    monkeypatch.setattr(cord, "download_cord_test_split", lambda: (_ for _ in ()).throw(OSError("offline")))
+    monkeypatch.setattr(
+        cord, "download_cord_test_split", lambda: (_ for _ in ()).throw(OSError("offline"))
+    )
     r = runner.invoke(app, ["fetch-cord", "--n", "2"])
     assert r.exit_code == 1 and "synthetic dataset still works" in r.output
 ```
@@ -1161,28 +1310,38 @@ Message: `feat: load CORD receipts as real-world documents`.
 - [ ] **Step 1: Write failing tests**
 
 ```python
-def test_build_corrected_keeps_exact_decimals():                 # Review Focus #5
+def test_build_corrected_keeps_exact_decimals():  # Review Focus #5
     scalars, items = form_values("invoice", clean_invoice_raw())
     scalars["total"] = "Rp 1.234.567,00"
     data, errors = build_corrected("invoice", scalars, items)
     # (total no longer matches arithmetic: rules are not this function's job)
     assert errors == [] and data["total"] == "1234567.00"
 
+
 def test_build_corrected_reports_errors():
     scalars, items = form_values("invoice", clean_invoice_raw())
-    scalars["invoice_date"] = "31/02/2026"; scalars["seller_name"] = ""
+    scalars["invoice_date"] = "31/02/2026"
+    scalars["seller_name"] = ""
     data, errors = build_corrected("invoice", scalars, items)
-    assert data is None and any("invoice_date" in e for e in errors) and any("seller_name" in e for e in errors)
+    assert (
+        data is None
+        and any("invoice_date" in e for e in errors)
+        and any("seller_name" in e for e in errors)
+    )
+
 
 def test_export_labels(tmp_path):
     # store with one doc + review action=correct -> data/labels/<doc_id>.json equals corrected_data
     ...
 
+
 def test_review_app_smoke(tmp_path, monkeypatch):
     monkeypatch.setenv("DOCEX_DATA_DIR", str(tmp_path))
-    runner.invoke(app, ["generate", "--n", "3"]); runner.invoke(app, ["run"])
+    runner.invoke(app, ["generate", "--n", "3"])
+    runner.invoke(app, ["run"])
     at = AppTest.from_file(str(Path(review_app.__file__)), default_timeout=60).run()
     assert not at.exception and at.button  # Approve / Save rendered
+
 
 def test_review_app_without_runs(tmp_path, monkeypatch):
     monkeypatch.setenv("DOCEX_DATA_DIR", str(tmp_path))
