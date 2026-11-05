@@ -109,7 +109,7 @@ class Receipt(BaseModel):
 
 **Field kritis**, dipakai untuk confidence dokumen dan status "dokumen benar penuh":
 - Invoice: `invoice_number, invoice_date, seller_name, seller_npwp, subtotal, tax_amount, total`
-- Receipt: `total, subtotal`, hanya field yang ada di ground truth.
+- Receipt: `total` (wajib), ditambah `subtotal` jika hasil ekstraksinya tidak kosong. Routing tidak boleh melihat ground truth.
 
 ### 3.2 Metadata dokumen
 
@@ -221,9 +221,9 @@ class ExtractionResult:
 | R06 | invoice | `total ≈ subtotal − discount + tax_amount` | hard |
 | R07 | invoice | format NPWP penjual valid (pembeli: soft) | hard |
 | R08 | invoice | tahun faktur ∈ [2015, tahun berjalan + 1] | soft |
-| R09 | invoice | `due_date ≥ invoice_date` | soft |
+| R09 | invoice | `due_date ≥ invoice_date` | hard |
 | R10 | invoice | `tax_rate ∈ {0.11, 0.12}` | soft |
-| R11 | semua | nilai uang ≥ 0 | hard |
+| R11 | semua | nilai uang ≥ 0 (invoice: semua field uang; receipt: hanya `subtotal, discount, service_charge, tax, total, cash, change`, karena baris diskon di struk bernilai negatif) | hard |
 | R20 | receipt | `total` terisi | hard |
 | R21 | receipt | `Σ price ≈ subtotal` (jika keduanya ada) | soft |
 | R22 | receipt | `total ≈ subtotal − discount + service_charge + tax` | soft |
@@ -239,7 +239,7 @@ Aturan struk dibuat *soft* karena struk asli CORD sering tidak konsisten. Kalau 
   - terlibat aturan *soft* yang gagal: × 0,8;
   - jika `consistency_runs = 2` dan nilai antar-attempt berbeda: × 0,4.
 - **Self-consistency:** default `consistency_runs = 2`, karena gratis di mode mock. Attempt ke-1 adalah hasil utama.
-- **Confidence dokumen** = minimum confidence field kritis yang ada di ground truth/skema.
+- **Confidence dokumen** = minimum confidence field kritis (§3.1). Untuk struk, `subtotal` hanya ikut dihitung jika hasil ekstraksinya tidak kosong.
 - **Alasan:** setiap pengurangan menyimpan alasannya (`reasons`), dan alasan inilah yang ditampilkan di UI.
 
 ### 4.7 Routing (`routing.py`)
@@ -290,7 +290,8 @@ Untuk setiap dokumen: `extract` (×`consistency_runs`), `validate`, `score`, `ro
 - **akurasi dokumen lolos otomatis** = % dokumen `auto_approved` yang semua field kritisnya benar;
 - ***error catch rate*** = di antara dokumen yang ekstraksinya salah di field kritis, % yang masuk `needs_review`;
 - ***fault catch rate*** = di antara dokumen ber-`injected_faults`, % yang masuk `needs_review`;
-- semua metrik di atas dirinci per `quality`, `source`, dan `template`.
+- semua metrik di atas dirinci per `quality`, `source`, dan `template`;
+- *fault catch rate* juga dirinci per jenis fault.
 
 **Kurva dan grafik:**
 - **Trade-off ambang:** ambang 0,05–0,95 terhadap tingkat otomatisasi dan akurasi lolos otomatis. Contoh narasi untuk CV: "pada ambang X, 70% dokumen otomatis dengan akurasi 99%".
@@ -370,7 +371,8 @@ Semua angka diberi label **"simulated extractor"** jika `simulated = True`.
 llm-doc-extractor/
 ├─ src/docex/
 │  ├─ __init__.py  cli.py  config.py  schemas.py  storage.py
-│  ├─ pipeline.py  scoring.py  routing.py  review_app.py
+│  ├─ results.py  groundtruth.py  imaging.py          # tipe hasil bersama, I/O ground truth, render halaman
+│  ├─ pipeline.py  scoring.py  routing.py  review_app.py  review_logic.py
 │  ├─ providers/     __init__.py  base.py  mock.py  registry.py
 │  ├─ synthetic/     __init__.py  catalog.py  generator.py  templates.py  degrade.py
 │  ├─ datasets/      __init__.py  cord.py
