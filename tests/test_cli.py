@@ -65,3 +65,15 @@ def test_demo_end_to_end(tmp_path):
     assert r.exit_code == 0, r.output
     assert list((tmp_path / "reports").glob("*/report.md"))
     assert "simulated extractor" in r.output
+
+
+def test_export_labels_command(tmp_path):
+    runner.invoke(app, ["generate", "--n", "2"])
+    runner.invoke(app, ["run"])
+    with Store(tmp_path / "docex.duckdb") as st:
+        rid = st.latest_run_id()
+        data = st.get_doc_detail(rid, "inv-0001")["extractions"][0]["data"]
+        st.save_review(rid, "inv-0001", "correct", data)
+    r = runner.invoke(app, ["export-labels"])
+    assert r.exit_code == 0 and "Wrote 1 labels" in r.output
+    assert (tmp_path / "labels" / "inv-0001.json").exists()

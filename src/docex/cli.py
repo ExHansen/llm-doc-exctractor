@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import typer
@@ -15,8 +17,11 @@ from docex.evaluation.metrics import EvalResult, build_records, evaluate
 from docex.evaluation.report import METRIC_ROWS, pct, write_report
 from docex.pipeline import RunSummary, run_pipeline
 from docex.providers.registry import get_provider
+from docex.review_logic import export_labels
 from docex.storage import Store
 from docex.synthetic.generator import generate_dataset
+
+REVIEW_APP = Path(__file__).parent / "review_app.py"
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -177,6 +182,28 @@ def demo(n: int = typer.Option(40, help="Invoices to generate if none exist yet.
     print_summary(summary)
     result, path = evaluate_run(settings, summary.run_id)
     print_headline(result, path)
+
+
+@app.command()
+def review() -> None:
+    """Open the Streamlit review queue in your browser."""
+    command = [sys.executable, "-m", "streamlit", "run", str(REVIEW_APP)]
+    raise typer.Exit(subprocess.run(command, check=False).returncode)
+
+
+@app.command("export-labels")
+def export_labels_command(
+    run: str | None = typer.Option(None, "--run", help="Run id (default: the latest run)."),
+) -> None:
+    """Write reviewer corrections as new ground-truth labels under data/labels/."""
+    settings = Settings()
+    with Store(settings.resolved_db_path) as store:
+        run_id = run or store.latest_run_id()
+        if run_id is None:
+            console.print("No runs found. Run `docex run` first.")
+            raise typer.Exit(1)
+        paths = export_labels(store, run_id, settings.data_dir)
+    console.print(f"Wrote {len(paths)} labels to {settings.data_dir / 'labels'}")
 
 
 if __name__ == "__main__":  # pragma: no cover
