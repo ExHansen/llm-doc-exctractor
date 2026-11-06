@@ -11,9 +11,11 @@ def rec(
     failed=False,
     quality="clean",
     source="synthetic",
+    doc_type="invoice",
 ):
     return DocRecord(
         doc_id=doc_id,
+        doc_type=doc_type,
         source=source,
         quality=quality,
         template="modern",
@@ -43,7 +45,7 @@ def test_routing_metrics():
     assert r.automation_rate == 0.5 and r.auto_approved_accuracy == 0.5
     assert r.error_catch_rate == 0.5 and r.fault_catch_rate == 1.0
     assert r.fault_catch_by_type == {"total_mismatch": 1.0}
-    assert r.doc_accuracy == 0.5 and r.field_accuracy == {"total": 0.5}
+    assert r.doc_accuracy == 0.5 and r.field_accuracy == {"invoice.total": 0.5}
     t = {row["threshold"]: row for row in r.tradeoff}
     assert len(r.tradeoff) == 19
     assert t[0.85]["automation_rate"] == 0.25 and t[0.85]["auto_approved_accuracy"] == 1.0
@@ -68,7 +70,8 @@ def test_breakdown_and_items():
         rec("b", "needs_review", 0.2, False, quality="scan_heavy"),
     ]
     r = evaluate(recs, "r1", False)
-    assert r.breakdown["quality"]["clean"] == {"n": 1, "automation_rate": 1.0, "doc_accuracy": 1.0}
+    clean = r.breakdown["quality"]["clean"]
+    assert clean["n"] == 1 and clean["automation_rate"] == 1.0 and clean["doc_accuracy"] == 1.0
     assert r.breakdown["quality"]["scan_heavy"]["automation_rate"] == 0.0
     assert r.item_precision == 1.0 and r.item_recall == 1.0 and r.item_f1 == 1.0
 
@@ -77,3 +80,37 @@ def test_empty_denominators_are_none():
     r = evaluate([rec("a", "needs_review", 0.1, True)], "r1", True)
     assert r.auto_approved_accuracy is None and r.fault_catch_rate is None
     assert r.error_catch_rate is None
+
+
+def test_error_catch_excludes_failed_extractions():
+    recs = [
+        rec("a", "needs_review", 0.0, False, failed=True),
+        rec("b", "auto_approved", 0.9, False),
+    ]
+    assert evaluate(recs, "r1", True).error_catch_rate == 0.0
+
+
+def test_field_accuracy_keyed_by_doc_type():
+    recs = [
+        rec("a", "auto_approved", 0.9, True, doc_type="invoice"),
+        rec("b", "needs_review", 0.2, False, doc_type="receipt", source="cord"),
+    ]
+    assert evaluate(recs, "r1", True).field_accuracy == {"invoice.total": 1.0, "receipt.total": 0.0}
+
+
+def test_breakdown_has_every_headline_metric():
+    recs = [
+        rec("a", "auto_approved", 0.9, True),
+        rec("b", "needs_review", 0.2, False, faults=("tax_mismatch",), hard_failed=True),
+    ]
+    group = evaluate(recs, "r1", True).breakdown["source"]["synthetic"]
+    assert set(group) == {
+        "n",
+        "automation_rate",
+        "auto_approved_accuracy",
+        "error_catch_rate",
+        "fault_catch_rate",
+        "doc_accuracy",
+        "item_f1",
+    }
+    assert group["fault_catch_rate"] == 1.0 and group["error_catch_rate"] == 1.0

@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from docex.evaluation.metrics import EvalResult  # noqa: E402
+from docex.evaluation.metrics import BREAKDOWN_METRICS, EvalResult  # noqa: E402
 
 # Reference palette (dataviz skill), light surface. Slots 1-2 validated as a pair.
 SURFACE = "#fcfcfb"
@@ -32,7 +32,8 @@ METRIC_ROWS = (
     ("Auto-approved accuracy", "auto_approved_accuracy",
      "Share of auto-approved documents whose critical fields are all correct."),
     ("Error catch rate", "error_catch_rate",
-     "Share of documents with a wrong critical field that were sent to review."),
+     "Share of documents with a wrong critical field that were sent to review "
+     "(failed extractions excluded: they always go to review)."),
     ("Fault catch rate", "fault_catch_rate",
      "Share of documents with a printed fault (wrong total, bad NPWP...) sent to review."),
     ("Document accuracy", "doc_accuracy", "Share of documents with every critical field correct."),
@@ -200,8 +201,9 @@ def write_report(result: EvalResult, out_dir: Path, threshold: float | None = No
     for key, groups in result.breakdown.items():
         md += ["", f"### By {key}", ""]
         md.append(_table(
-            [key, "n", "Automation rate", "Document accuracy"],
-            [[name, str(g["n"]), pct(g["automation_rate"]), pct(g["doc_accuracy"])]
+            [key, "n", "Automation", "Auto-approved acc.", "Error catch", "Fault catch",
+             "Doc accuracy", "Item F1"],
+            [[name, str(g["n"])] + [pct(g[m]) for m in BREAKDOWN_METRICS]
              for name, g in groups.items()],
         ))  # fmt: skip
 

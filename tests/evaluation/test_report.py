@@ -37,3 +37,10 @@ def test_report_files(tmp_path):
 def test_report_without_simulated_banner(tmp_path):
     path = write_report(evaluate([rec("a", "needs_review", 0.1, True)], "r2", False), tmp_path)
     assert "Simulated extractor" not in path.read_text(encoding="utf-8")
+
+
+def test_breakdown_table_lists_every_headline_metric(tmp_path):
+    path = write_report(evaluate([rec("a", "auto_approved", 0.9, True)], "r3", True), tmp_path)
+    text = path.read_text(encoding="utf-8")
+    assert "| quality | n | Automation | Auto-approved acc. | Error catch | Fault catch |" in text
+    assert "`invoice.total`" in text and "failed extractions excluded" in text

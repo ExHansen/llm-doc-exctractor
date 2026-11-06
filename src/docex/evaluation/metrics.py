@@ -17,6 +17,7 @@ THRESHOLDS = [round(0.05 * k, 2) for k in range(1, 20)]
 @dataclass
 class DocRecord:
     doc_id: str
+    doc_type: str
     source: str
     quality: str
     template: str | None
@@ -75,6 +76,7 @@ def build_records(store: Store, run_id: str, data_dir: Path) -> list[DocRecord]:
         records.append(
             DocRecord(
                 doc_id=doc.doc_id,
+                doc_type=doc.doc_type,
                 source=doc.source,
                 quality=doc.quality,
                 template=doc.template,
@@ -102,13 +104,8 @@ def _share(flags: list[bool]) -> float | None:
     return _rate(sum(flags), len(flags))
 
 
-def evaluate(records: list[DocRecord], run_id: str, simulated: bool) -> EvalResult:
-    n = len(records)
-    per_field: dict[str, list[bool]] = defaultdict(list)
-    for r in records:
-        for f, ok in r.field_correct.items():
-            per_field[f].append(ok)
-
+def _headline(records: list[DocRecord]) -> dict[str, float | None]:
+    """The headline metrics, for a whole run or for one breakdown group."""
     tp = sum(r.items_tp for r in records)
     fp = sum(r.items_fp for r in records)
     fn = sum(r.items_fn for r in records)
@@ -120,12 +117,42 @@ def evaluate(records: list[DocRecord], run_id: str, simulated: bool) -> EvalResu
             if precision + recall == 0
             else round(2 * precision * recall / (precision + recall), 4)
         )
-
     auto = [r for r in records if r.route == "auto_approved"]
-    wrong = [r for r in records if not r.critical_correct]
+    # Failed extractions always go to review, so they would only inflate the catch rate.
+    wrong = [r for r in records if not r.critical_correct and not r.failed]
     faulty = [r for r in records if r.faults]
+    return {
+        "automation_rate": _share([r.route == "auto_approved" for r in records]),
+        "auto_approved_accuracy": _share([r.critical_correct for r in auto]),
+        "error_catch_rate": _share([r.route == "needs_review" for r in wrong]),
+        "fault_catch_rate": _share([r.route == "needs_review" for r in faulty]),
+        "doc_accuracy": _share([r.critical_correct for r in records]),
+        "item_precision": precision,
+        "item_recall": recall,
+        "item_f1": f1,
+    }
+
+
+BREAKDOWN_METRICS = (
+    "automation_rate",
+    "auto_approved_accuracy",
+    "error_catch_rate",
+    "fault_catch_rate",
+    "doc_accuracy",
+    "item_f1",
+)
+
+
+def evaluate(records: list[DocRecord], run_id: str, simulated: bool) -> EvalResult:
+    n = len(records)
+    per_field: dict[str, list[bool]] = defaultdict(list)
+    for r in records:
+        for f, ok in r.field_correct.items():
+            per_field[f"{r.doc_type}.{f}"].append(ok)
+
+    headline = _headline(records)
     by_fault: dict[str, list[bool]] = defaultdict(list)
-    for r in faulty:
+    for r in records:
         for fault in r.faults:
             by_fault[fault].append(r.route == "needs_review")
 
@@ -134,14 +161,10 @@ def evaluate(records: list[DocRecord], run_id: str, simulated: bool) -> EvalResu
         groups: dict[str, list[DocRecord]] = defaultdict(list)
         for r in records:
             groups[getattr(r, key) or "n/a"].append(r)
-        breakdown[key] = {
-            name: {
-                "n": len(group),
-                "automation_rate": _share([r.route == "auto_approved" for r in group]),
-                "doc_accuracy": _share([r.critical_correct for r in group]),
-            }
-            for name, group in sorted(groups.items())
-        }
+        breakdown[key] = {}
+        for name, group in sorted(groups.items()):
+            metrics = _headline(group)
+            breakdown[key][name] = {"n": len(group)} | {m: metrics[m] for m in BREAKDOWN_METRICS}
 
     tradeoff = []
     for t in THRESHOLDS:
@@ -176,15 +199,15 @@ def evaluate(records: list[DocRecord], run_id: str, simulated: bool) -> EvalResu
         run_id=run_id,
         simulated=simulated,
         n_docs=n,
-        field_accuracy={f: _share(v) for f, v in per_field.items()},
-        doc_accuracy=_share([r.critical_correct for r in records]),
-        item_precision=precision,
-        item_recall=recall,
-        item_f1=f1,
-        automation_rate=_share([r.route == "auto_approved" for r in records]),
-        auto_approved_accuracy=_share([r.critical_correct for r in auto]),
-        error_catch_rate=_share([r.route == "needs_review" for r in wrong]),
-        fault_catch_rate=_share([r.route == "needs_review" for r in faulty]),
+        field_accuracy={f: _share(v) for f, v in sorted(per_field.items())},
+        doc_accuracy=headline["doc_accuracy"],
+        item_precision=headline["item_precision"],
+        item_recall=headline["item_recall"],
+        item_f1=headline["item_f1"],
+        automation_rate=headline["automation_rate"],
+        auto_approved_accuracy=headline["auto_approved_accuracy"],
+        error_catch_rate=headline["error_catch_rate"],
+        fault_catch_rate=headline["fault_catch_rate"],
         fault_catch_by_type={k: _share(v) for k, v in sorted(by_fault.items())},
         breakdown=breakdown,
         tradeoff=tradeoff,
