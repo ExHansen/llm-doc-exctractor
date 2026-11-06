@@ -4,42 +4,70 @@
   "breakdown": {
     "quality": {
       "clean": {
+        "auto_approved_accuracy": 1.0,
         "automation_rate": 0.32,
         "doc_accuracy": 0.68,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": 1.0,
+        "item_f1": 0.8877,
         "n": 25
       },
       "scan_heavy": {
+        "auto_approved_accuracy": null,
         "automation_rate": 0.0,
         "doc_accuracy": 0.5714,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": 1.0,
+        "item_f1": 0.6667,
         "n": 7
       },
       "scan_light": {
+        "auto_approved_accuracy": 1.0,
         "automation_rate": 0.125,
         "doc_accuracy": 0.625,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": null,
+        "item_f1": 0.9231,
         "n": 8
       }
     },
     "source": {
       "synthetic": {
+        "auto_approved_accuracy": 1.0,
         "automation_rate": 0.225,
         "doc_accuracy": 0.65,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": 1.0,
+        "item_f1": 0.8563,
         "n": 40
       }
     },
     "template": {
       "klasik": {
+        "auto_approved_accuracy": 1.0,
         "automation_rate": 0.2353,
         "doc_accuracy": 0.6471,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": null,
+        "item_f1": 0.8472,
         "n": 17
       },
       "minimal": {
+        "auto_approved_accuracy": 1.0,
         "automation_rate": 0.3,
         "doc_accuracy": 0.6,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": 1.0,
+        "item_f1": 0.8837,
         "n": 10
       },
       "modern": {
+        "auto_approved_accuracy": 1.0,
         "automation_rate": 0.1538,
         "doc_accuracy": 0.6923,
+        "error_catch_rate": 1.0,
+        "fault_catch_rate": 1.0,
+        "item_f1": 0.8462,
         "n": 13
       }
     }
@@ -98,25 +126,25 @@
   },
   "fault_catch_rate": 1.0,
   "field_accuracy": {
-    "buyer_name": 0.975,
-    "buyer_npwp": 1.0,
-    "discount": 0.95,
-    "due_date": 0.875,
-    "invoice_date": 0.85,
-    "invoice_number": 0.9,
-    "seller_name": 0.95,
-    "seller_npwp": 0.925,
-    "subtotal": 0.925,
-    "tax_amount": 0.875,
-    "tax_base": 0.95,
-    "tax_rate": 0.9,
-    "total": 0.95
+    "invoice.buyer_name": 0.975,
+    "invoice.buyer_npwp": 1.0,
+    "invoice.discount": 0.95,
+    "invoice.due_date": 0.875,
+    "invoice.invoice_date": 0.85,
+    "invoice.invoice_number": 0.9,
+    "invoice.seller_name": 0.95,
+    "invoice.seller_npwp": 0.925,
+    "invoice.subtotal": 0.925,
+    "invoice.tax_amount": 0.875,
+    "invoice.tax_base": 0.95,
+    "invoice.tax_rate": 0.9,
+    "invoice.total": 0.95
   },
   "item_f1": 0.8563,
   "item_precision": 0.8882,
   "item_recall": 0.8266,
   "n_docs": 40,
-  "run_id": "20261105-203727-mock",
+  "run_id": "20261106-123332-mock",
   "simulated": true,
   "tradeoff": [
     {

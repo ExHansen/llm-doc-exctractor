@@ -1,4 +1,4 @@
-# Extraction QC report: run `20261105-203727-mock`
+# Extraction QC report: run `20261106-123332-mock`
 
 > **Simulated extractor.** These numbers come from the offline mock provider, which returns ground truth with injected LLM/OCR-style errors. They measure the QC pipeline (validation, confidence, routing), not a real model.
 
@@ -9,7 +9,7 @@
 | Documents | 40 | Documents in the run. |
 | Automation rate | 22.5% | Share of documents auto-approved. |
 | Auto-approved accuracy | 100.0% | Share of auto-approved documents whose critical fields are all correct. |
-| Error catch rate | 100.0% | Share of documents with a wrong critical field that were sent to review. |
+| Error catch rate | 100.0% | Share of documents with a wrong critical field that were sent to review (failed extractions excluded: they always go to review). |
 | Fault catch rate | 100.0% | Share of documents with a printed fault (wrong total, bad NPWP...) sent to review. |
 | Document accuracy | 65.0% | Share of documents with every critical field correct. |
 | Line-item F1 | 85.6% | Line items extracted with every field correct. |
@@ -22,19 +22,19 @@ Review threshold: **0.70** (document confidence).
 
 | Field | Accuracy |
 |---|---|
-| `buyer_name` | 97.5% |
-| `buyer_npwp` | 100.0% |
-| `discount` | 95.0% |
-| `due_date` | 87.5% |
-| `invoice_date` | 85.0% |
-| `invoice_number` | 90.0% |
-| `seller_name` | 95.0% |
-| `seller_npwp` | 92.5% |
-| `subtotal` | 92.5% |
-| `tax_amount` | 87.5% |
-| `tax_base` | 95.0% |
-| `tax_rate` | 90.0% |
-| `total` | 95.0% |
+| `invoice.buyer_name` | 97.5% |
+| `invoice.buyer_npwp` | 100.0% |
+| `invoice.discount` | 95.0% |
+| `invoice.due_date` | 87.5% |
+| `invoice.invoice_date` | 85.0% |
+| `invoice.invoice_number` | 90.0% |
+| `invoice.seller_name` | 95.0% |
+| `invoice.seller_npwp` | 92.5% |
+| `invoice.subtotal` | 92.5% |
+| `invoice.tax_amount` | 87.5% |
+| `invoice.tax_base` | 95.0% |
+| `invoice.tax_rate` | 90.0% |
+| `invoice.total` | 95.0% |
 
 ## Fault catch rate by fault type
 
@@ -51,25 +51,25 @@ Review threshold: **0.70** (document confidence).
 
 ### By quality
 
-| quality | n | Automation rate | Document accuracy |
-|---|---|---|---|
-| clean | 25 | 32.0% | 68.0% |
-| scan_heavy | 7 | 0.0% | 57.1% |
-| scan_light | 8 | 12.5% | 62.5% |
+| quality | n | Automation | Auto-approved acc. | Error catch | Fault catch | Doc accuracy | Item F1 |
+|---|---|---|---|---|---|---|---|
+| clean | 25 | 32.0% | 100.0% | 100.0% | 100.0% | 68.0% | 88.8% |
+| scan_heavy | 7 | 0.0% | n/a | 100.0% | 100.0% | 57.1% | 66.7% |
+| scan_light | 8 | 12.5% | 100.0% | 100.0% | n/a | 62.5% | 92.3% |
 
 ### By source
 
-| source | n | Automation rate | Document accuracy |
-|---|---|---|---|
-| synthetic | 40 | 22.5% | 65.0% |
+| source | n | Automation | Auto-approved acc. | Error catch | Fault catch | Doc accuracy | Item F1 |
+|---|---|---|---|---|---|---|---|
+| synthetic | 40 | 22.5% | 100.0% | 100.0% | 100.0% | 65.0% | 85.6% |
 
 ### By template
 
-| template | n | Automation rate | Document accuracy |
-|---|---|---|---|
-| klasik | 17 | 23.5% | 64.7% |
-| minimal | 10 | 30.0% | 60.0% |
-| modern | 13 | 15.4% | 69.2% |
+| template | n | Automation | Auto-approved acc. | Error catch | Fault catch | Doc accuracy | Item F1 |
+|---|---|---|---|---|---|---|---|
+| klasik | 17 | 23.5% | 100.0% | 100.0% | n/a | 64.7% | 84.7% |
+| minimal | 10 | 30.0% | 100.0% | 100.0% | 100.0% | 60.0% | 88.4% |
+| modern | 13 | 15.4% | 100.0% | 100.0% | 100.0% | 69.2% | 84.6% |
 
 ## Threshold trade-off
 

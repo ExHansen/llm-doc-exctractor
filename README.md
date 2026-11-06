@@ -85,6 +85,11 @@ Every setting can be changed through `DOCEX_*` environment variables or a `.env`
 | Synthetic invoices (`docex demo`) | 40 | 22.5% | **100%** | **100%** | **100%** | 65.0% | 85.6% |
 | CORD receipts (`--source cord`) | 50 | 72.0% | **100%** | **100%** | n/a | 92.0% | 88.9% |
 
+The synthetic row is the committed example report. The CORD row comes from a local
+`docex fetch-cord --n 50` run (the receipts are downloaded, not committed); the same commands
+with seed 42 reproduce it. Error catch rate leaves out extractions that failed outright, since
+those always go to review.
+
 What these say:
 
 - **Nothing wrong was auto-approved.** Every document with a wrong critical field, and every
@@ -93,7 +98,8 @@ What these say:
 - **The router is conservative.** On invoices it also sends correct documents to review, mostly
   because a line item failed a rule or the two extraction attempts disagreed. The trade-off curve
   shows the price of automating more: at threshold 0.30 automation rises to 35.0% and
-  auto-approved accuracy falls to 92.9%.
+  auto-approved accuracy falls to 92.9%. The curve moves in steps because confidence is a
+  product of a few fixed factors (1.0, 0.8, 0.5, 0.4, ...), so only a few levels occur.
 - **Confidence is under-confident, which is safe:** fields scored around 0.5 were right 96% of
   the time. That is the first thing to tune once a real model is plugged in.
 
@@ -119,20 +125,21 @@ Full report: [`docs/example-report/report.md`](docs/example-report/report.md).
 - **Ground truth = what is printed.** If an invoice prints a wrong total, the label is that wrong
   total. Extraction is judged on reading the document; validation is judged on catching the error.
 - **Routing never reads ground truth.** Only the evaluator does.
-- **Idempotent, append-only runs.** Every run gets its own `run_id`, so runs can be compared.
+- **Append-only runs.** Every run gets its own `run_id` and nothing is overwritten, so runs can
+  be compared.
 
 ## Validation rules
 
 | ID | Applies to | Rule | Severity |
 |---|---|---|---|
 | R00_parse | all | a value is present but cannot be parsed (e.g. `31/02/2026`) | hard |
-| R01 | all | required field missing | hard |
+| R01 | invoice | required field missing (seller NPWP included) | hard |
 | R02 | invoice | quantity x unit price = line amount | hard |
 | R03 | invoice | subtotal = sum of line amounts | hard |
 | R04 | invoice | tax base = subtotal - discount, or 11/12 of it (*DPP Nilai Lain*) | soft |
 | R05 | invoice | tax amount = tax base x tax rate | hard |
 | R06 | invoice | total = subtotal - discount + tax | hard |
-| R07 / R07B | invoice | seller / buyer NPWP has 15 or 16 digits | hard / soft |
+| R07 / R07B | invoice | seller / buyer NPWP, when present, has 15 or 16 digits | hard / soft |
 | R08 | invoice | invoice year between 2015 and next year | soft |
 | R09 | invoice | due date not before invoice date | hard |
 | R10 | invoice | tax rate is 11% or 12% | soft |
@@ -211,7 +218,7 @@ catches exceptions, so one bad file never stops a run.
 ## Development
 
 ```bash
-uv run pytest            # 186 tests, no network needed
+uv run pytest            # 213 tests, no network needed
 uv run ruff check
 uv run ruff format --check
 ```
