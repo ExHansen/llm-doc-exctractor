@@ -1,3 +1,5 @@
+import pytest
+
 from docex.synthetic.catalog import PRODUCTS, TEMPLATES
 from docex.synthetic.generator import FAULT_RULE, FAULT_TYPES, make_invoice
 from docex.validation.normalize import npwp_digits
@@ -55,3 +57,20 @@ def test_variety():
 
 def test_catalog_size():
     assert len(PRODUCTS) >= 30
+
+
+def test_faults_never_print_negative_amounts():
+    negative = []
+    for i in range(300):
+        inv = make_invoice(42, i, True).invoice
+        amounts = [inv.subtotal, inv.discount, inv.tax_base, inv.tax_amount, inv.total]
+        amounts += [x for it in inv.line_items for x in (it.unit_price, it.amount)]
+        if any(a < 0 for a in amounts):
+            negative.append(i)
+    assert negative == []
+
+
+@pytest.mark.parametrize("seed,index", [(2, 274), (3, 142), (4, 147)])
+def test_small_invoice_fault_stays_non_negative(seed, index):
+    inv = make_invoice(seed, index, True).invoice  # tax_mismatch on a small invoice
+    assert inv.tax_amount >= 0 and inv.total >= 0

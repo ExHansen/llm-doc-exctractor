@@ -144,9 +144,12 @@ def make_invoice(seed: int, index: int, faulty: bool) -> SyntheticInvoice:
         fault = rng.choice(FAULT_TYPES)
         faults = (fault,)
         if fault == "total_mismatch":
-            total += _delta(rng)
+            delta = _delta(rng)
+            total += delta if total + delta >= 0 else abs(delta)
         elif fault == "tax_mismatch":
             delta = _delta(rng)
+            if tax_amount + delta < 0:  # keep a small invoice's printed tax non-negative
+                delta = abs(delta)
             tax_amount += delta
             total += delta  # the total is consistent with the (wrong) printed tax
         elif fault == "line_amount_mismatch":

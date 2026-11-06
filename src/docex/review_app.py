@@ -69,10 +69,13 @@ if not docs:
     st.success("Nothing to show for this filter.")
     st.stop()
 
+# One position per (run, filter), so switching either starts at the first document.
+radio_key = f"doc_radio:{run_id}:{show}"
 if "advance_to" in st.session_state:
-    st.session_state["doc_radio"] = st.session_state.pop("advance_to")
-if st.session_state.get("doc_radio", 0) >= len(docs):
-    st.session_state["doc_radio"] = 0
+    target_key, target_index = st.session_state.pop("advance_to")
+    st.session_state[target_key] = target_index
+if st.session_state.get(radio_key, 0) >= len(docs):
+    st.session_state[radio_key] = 0
 
 
 def doc_label(i: int) -> str:
@@ -81,9 +84,7 @@ def doc_label(i: int) -> str:
     return f"{mark}{d['doc_id']} ({d['doc_confidence']:.2f})"
 
 
-index = st.sidebar.radio(
-    "Documents", list(range(len(docs))), format_func=doc_label, key="doc_radio"
-)
+index = st.sidebar.radio("Documents", list(range(len(docs))), format_func=doc_label, key=radio_key)
 current = docs[index]
 doc_id = current["doc_id"]
 with store() as s:
@@ -159,5 +160,9 @@ with right:
             else:
                 st.error("Not saved:\n\n" + "\n".join(f"- {e}" for e in errors))
         if ok:
-            st.session_state["advance_to"] = min(index + 1, len(docs) - 1)
+            # Forget unsaved edits of this document, then move to the next one.
+            prefix = f"{run_id}:{doc_id}:"
+            for key in [k for k in st.session_state if str(k).startswith(prefix)]:
+                del st.session_state[key]
+            st.session_state["advance_to"] = (radio_key, min(index + 1, len(docs) - 1))
             st.rerun()

@@ -28,17 +28,49 @@ def test_review_app_smoke():
     assert any(t.label.startswith("total") for t in at.text_input)
 
 
-def test_review_app_approve_advances_and_saves(tmp_path):
-    runner.invoke(app, ["generate", "--n", "3", "--faulty-rate", "1"])
-    runner.invoke(app, ["run"])
-    at = AppTest.from_file(str(REVIEW_APP), default_timeout=60).run()
-    first = at.session_state["doc_radio"]
-    next(b for b in at.button if b.label == "Approve").click().run()
-    assert not at.exception and at.session_state["doc_radio"] == first + 1
+def _latest_run(tmp_path):
     from docex.storage import Store
 
     with Store(tmp_path / "docex.duckdb") as st:
-        assert len(st.get_reviews(st.latest_run_id())) == 1
+        return st.latest_run_id(), st
+
+
+def test_review_app_approve_advances_and_saves(tmp_path):
+    runner.invoke(app, ["generate", "--n", "3", "--faulty-rate", "1"])
+    runner.invoke(app, ["run"])
+    run_id, _ = _latest_run(tmp_path)
+    key = f"doc_radio:{run_id}:needs_review"
+    at = AppTest.from_file(str(REVIEW_APP), default_timeout=60).run()
+    first = at.session_state[key]
+    next(b for b in at.button if b.label == "Approve").click().run()
+    assert not at.exception and at.session_state[key] == first + 1
+    from docex.storage import Store
+
+    with Store(tmp_path / "docex.duckdb") as st:
+        assert len(st.get_reviews(run_id)) == 1
+
+
+def test_review_app_discards_edits_after_approve(tmp_path):
+    runner.invoke(app, ["generate", "--n", "3", "--faulty-rate", "1"])
+    runner.invoke(app, ["run"])
+    run_id, _ = _latest_run(tmp_path)
+    at = AppTest.from_file(str(REVIEW_APP), default_timeout=60).run()
+    total = next(t for t in at.text_input if t.label.startswith("total"))
+    total.input("999").run()
+    edited_key = total.key
+    next(b for b in at.button if b.label == "Approve").click().run()
+    assert not at.exception and edited_key not in at.session_state
+
+
+def test_review_app_filter_change_starts_at_first_document(tmp_path):
+    runner.invoke(app, ["generate", "--n", "3", "--faulty-rate", "1"])
+    runner.invoke(app, ["run"])
+    run_id, _ = _latest_run(tmp_path)
+    at = AppTest.from_file(str(REVIEW_APP), default_timeout=60).run()
+    next(b for b in at.button if b.label == "Approve").click().run()
+    show = next(r for r in at.radio if r.label == "Show")
+    show.set_value("all").run()
+    assert not at.exception and at.session_state[f"doc_radio:{run_id}:all"] == 0
 
 
 def test_review_app_reports_busy_database(tmp_path):
