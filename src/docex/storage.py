@@ -60,7 +60,11 @@ class Store:
         db_path = Path(db_path)
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._con = duckdb.connect(str(db_path))
-        self._con.execute(SCHEMA)
+        try:
+            self._con.execute(SCHEMA)
+        except Exception:
+            self._con.close()  # never leave the file locked by a half-built Store
+            raise
 
     def close(self) -> None:
         self._con.close()
@@ -144,9 +148,12 @@ class Store:
         row = self._con.execute("SELECT config FROM runs WHERE run_id = ?", [run_id]).fetchone()
         return None if row is None else _load(row[0])
 
-    def latest_run_id(self) -> str | None:
+    def latest_run_id(self, status: str | None = None) -> str | None:
+        """The most recent run, optionally only among runs with this status."""
+        where, params = ("WHERE status = ? ", [status]) if status else ("", [])
         row = self._con.execute(
-            "SELECT run_id FROM runs ORDER BY started_at DESC, run_id DESC LIMIT 1"
+            f"SELECT run_id FROM runs {where}ORDER BY started_at DESC, run_id DESC LIMIT 1",
+            params,
         ).fetchone()
         return None if row is None else row[0]
 

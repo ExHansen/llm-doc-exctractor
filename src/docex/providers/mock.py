@@ -225,17 +225,24 @@ class MockProvider:
 
     def _attempt(self, gt: dict, doc: DocumentMeta, p: float, attempt: int) -> dict:
         key = f"{self.seed}:{doc.doc_id}"
+        if attempt == 1:
+            return corrupt(gt, doc.doc_type, p, random.Random(f"{key}:1"))[0]
+        # Later attempts make independent mistakes, except that each mistake of attempt 1
+        # (wrong value or dropped line) repeats with probability `consistency_correlation`.
         rng1 = random.Random(f"{key}:1")
         first, first_paths = _corrupt_fields(gt, doc.doc_type, p, rng1)
-        dropped = _dropped_items(gt, doc.doc_type, p, rng1)
-        if attempt == 1:
-            return _remove_items(first, doc.doc_type, dropped)
-        later, _ = _corrupt_fields(gt, doc.doc_type, p, random.Random(f"{key}:{attempt}"))
+        first_dropped = _dropped_items(gt, doc.doc_type, p, rng1)
+        rng_k = random.Random(f"{key}:{attempt}")
+        later, _ = _corrupt_fields(gt, doc.doc_type, p, rng_k)
+        later_dropped = _dropped_items(gt, doc.doc_type, p, rng_k)
         repeat = random.Random(f"{key}:corr:{attempt}")
         for path in sorted(first_paths):
             if repeat.random() < self.consistency_correlation:
                 _set(later, path, _get(first, path))
-        return _remove_items(later, doc.doc_type, dropped)
+        for index in sorted(first_dropped):
+            if repeat.random() < self.consistency_correlation:
+                later_dropped.add(index)
+        return _remove_items(later, doc.doc_type, later_dropped)
 
     def extract(self, doc: DocumentMeta, schema: type[BaseModel], attempt: int) -> ExtractionResult:
         fail_rng = random.Random(f"{self.seed}:{doc.doc_id}:{attempt}:fail")

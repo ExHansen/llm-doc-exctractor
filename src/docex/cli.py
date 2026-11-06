@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from enum import StrEnum
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -65,9 +67,17 @@ def print_summary(summary: RunSummary) -> None:
     console.print(f"run_id: {summary.run_id}")
 
 
-def execute_run(settings: Settings, source: str = "all", limit: int | None = None) -> RunSummary:
+class Source(StrEnum):
+    synthetic = "synthetic"
+    cord = "cord"
+    all = "all"
+
+
+def execute_run(
+    settings: Settings, source: Source = Source.all, limit: int | None = None
+) -> RunSummary:
     with Store(settings.resolved_db_path) as store:
-        docs = store.list_documents(None if source == "all" else source, limit)
+        docs = store.list_documents(None if source == Source.all else source.value, limit)
         if not docs:
             console.print("No documents found. Run `docex generate` first.")
             raise typer.Exit(1)
@@ -88,7 +98,7 @@ def execute_run(settings: Settings, source: str = "all", limit: int | None = Non
 @app.command()
 def run(
     provider: str | None = typer.Option(None, help="Provider name (default: DOCEX_PROVIDER)."),
-    source: str = typer.Option("all", help="synthetic, cord or all."),
+    source: Annotated[Source, typer.Option(help="Which documents to process.")] = Source.all,
     limit: int | None = typer.Option(None, help="Process at most N documents."),
 ) -> None:
     """Extract, validate, score and route every registered document."""
@@ -108,9 +118,9 @@ def create_invoices(settings: Settings, n: int, seed: int, faulty_rate: float, s
 
 def evaluate_run(settings: Settings, run_id: str | None) -> tuple[EvalResult, Path]:
     with Store(settings.resolved_db_path) as store:
-        run_id = run_id or store.latest_run_id()
+        run_id = run_id or store.latest_run_id(status="completed")
         if run_id is None:
-            console.print("No runs found. Run `docex run` first.")
+            console.print("No completed runs found. Run `docex run` first.")
             raise typer.Exit(1)
         config = store.get_run_config(run_id)
         if config is None:

@@ -77,3 +77,28 @@ def test_export_labels_command(tmp_path):
     r = runner.invoke(app, ["export-labels"])
     assert r.exit_code == 0 and "Wrote 1 labels" in r.output
     assert (tmp_path / "labels" / "inv-0001.json").exists()
+
+
+def test_run_rejects_unknown_source():
+    runner.invoke(app, ["generate", "--n", "2"])
+    r = runner.invoke(app, ["run", "--source", "foo"])
+    assert r.exit_code == 2
+
+
+def test_eval_skips_unfinished_runs(tmp_path):
+    runner.invoke(app, ["generate", "--n", "2"])
+    runner.invoke(app, ["run"])
+    with Store(tmp_path / "docex.duckdb") as st:
+        done = st.latest_run_id()
+        unfinished = st.create_run("mock", "mock-v1", {})  # newer, still 'running'
+    r = runner.invoke(app, ["eval"])
+    assert r.exit_code == 0, r.output
+    assert (tmp_path / "reports" / done / "report.md").exists()
+    assert not (tmp_path / "reports" / unfinished).exists()
+
+
+def test_eval_with_only_unfinished_runs_exits_1(tmp_path):
+    with Store(tmp_path / "docex.duckdb") as st:
+        st.create_run("mock", "mock-v1", {})
+    r = runner.invoke(app, ["eval"])
+    assert r.exit_code == 1 and "No completed runs" in r.output

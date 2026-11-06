@@ -81,7 +81,7 @@ def test_correlation_one_repeats_errors(tmp_path):
             assert a2[k] == v
             repeated += 1
     assert repeated > 0
-    assert len(a1["line_items"]) == len(a2["line_items"])
+    assert len(a2["line_items"]) <= len(a1["line_items"])  # attempt-1 drops repeat
 
 
 def test_correlation_zero_differs_somewhere(tmp_path):
@@ -128,3 +128,24 @@ def test_receipts_supported(tmp_path, quality):
     )
     r = MockProvider(tmp_path, base_error_rate=0.5, failure_rate=0).extract(doc, Invoice, 1)
     assert r.status == "ok" and set(r.data) == set(gt)
+
+
+def test_item_drops_can_differ_between_attempts(tmp_path):
+    docs = [invoice_doc_n(tmp_path, i, "scan_heavy") for i in range(1, 11)]
+    m = MockProvider(tmp_path, base_error_rate=0.3, consistency_correlation=0.0, failure_rate=0)
+    counts = [
+        (
+            len(m.extract(d, Invoice, 1).data["line_items"]),
+            len(m.extract(d, Invoice, 2).data["line_items"]),
+        )
+        for d in docs
+    ]
+    assert any(a != b for a, b in counts)
+
+
+def test_first_attempt_is_one_corrupt_call(tmp_path):
+    doc = invoice_doc(tmp_path, "scan_light")
+    m = MockProvider(tmp_path, seed=7, base_error_rate=0.2, failure_rate=0)
+    gt = read_ground_truth(tmp_path / doc.gt_path).data
+    expected, _ = corrupt(gt, "invoice", 0.2 * 1.5, random.Random(f"7:{doc.doc_id}:1"))
+    assert m.extract(doc, Invoice, 1).data == expected

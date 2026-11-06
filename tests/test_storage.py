@@ -121,3 +121,24 @@ def test_run_config(tmp_path):
         rid = s.create_run("mock", "mock-v1", {"review_threshold": 0.6})
         assert s.get_run_config(rid) == {"review_threshold": 0.6}
         assert s.get_run_config("missing") is None
+
+
+def test_latest_completed_run(tmp_path):
+    with Store(tmp_path / "d.duckdb") as s:
+        a = s.create_run("mock", "mock-v1", {})
+        s.finish_run(a, 0, "completed")
+        b = s.create_run("mock", "mock-v1", {})
+        assert s.latest_run_id() == b and s.latest_run_id(status="completed") == a
+
+
+def test_store_closes_connection_when_schema_fails(tmp_path, monkeypatch):
+    import duckdb
+    import pytest
+
+    import docex.storage as storage
+
+    monkeypatch.setattr(storage, "SCHEMA", "THIS IS NOT SQL")
+    p = tmp_path / "d.duckdb"
+    with pytest.raises(duckdb.Error):
+        Store(p)
+    p.unlink()  # fails on Windows if the half-built Store kept its connection
