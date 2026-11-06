@@ -27,7 +27,7 @@ def test_clean_invoice_passes_everything():
             "R03",
         ),
         (lambda d: d.update(seller_npwp="01.234.567.8-901.00"), "R07"),
-        (lambda d: d.update(seller_npwp=None), "R07"),
+        (lambda d: d.update(seller_npwp=None), "R01"),
         (lambda d: d.update(buyer_npwp="123"), "R07B"),
         (lambda d: d.update(invoice_date="2014-01-02", due_date=None), "R08"),
         (lambda d: d.update(due_date="2026-10-01"), "R09"),
@@ -123,3 +123,15 @@ def test_receipt_missing_total_is_hard():
 def test_receipt_negative_item_price_is_not_r11():
     raw = {"items": [{"name": "Diskon", "price": "-5000"}], "total": "0"}
     assert "R11" not in failed(validate(raw, "receipt", TODAY))
+
+
+def test_missing_seller_npwp_is_reported_as_missing():
+    raw = clean_invoice_raw()
+    raw["seller_npwp"] = None
+    results = [r for r in validate(raw, "invoice", TODAY).results if not r.passed]
+    assert [r.rule_id for r in results] == ["R01"] and results[0].fields == ("seller_npwp",)
+
+
+def test_receipts_use_r20_not_r01():
+    ids = {r.rule_id for r in validate({"items": []}, "receipt", TODAY).results}
+    assert "R20" in ids and "R01" not in ids

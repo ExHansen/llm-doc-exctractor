@@ -75,3 +75,24 @@ def test_receipt_subtotal_counts_when_present():
     raw = {"items": [{"name": "Es Teh", "price": "10000"}], "subtotal": "10000", "total": "5000"}
     out = validate(raw, "receipt", TODAY)  # R22 soft fails: subtotal, total x0.8
     assert doc_confidence("receipt", score_fields("receipt", out, [])) == 0.8
+
+
+def test_missing_seller_npwp_scores_zero():
+    raw = clean_invoice_raw()
+    raw["seller_npwp"] = None
+    assert scores_by_field(raw)["seller_npwp"].confidence == 0.0
+
+
+def test_receipt_missing_total_scores_zero():
+    out = validate({"items": [], "subtotal": "5000"}, "receipt", TODAY)
+    s = {x.field: x for x in score_fields("receipt", out, [])}
+    assert s["total"].confidence == 0.0 and s["total"].reasons == ("missing required",)
+
+
+def test_equal_numbers_written_differently_do_not_disagree():
+    a = validate(clean_invoice_raw(), "invoice", TODAY)
+    raw_b = clean_invoice_raw()
+    raw_b["line_items"][0]["quantity"] = "3.0"
+    b = validate(raw_b, "invoice", TODAY)
+    s = {x.field: x for x in score_fields("invoice", a, [b.draft])}
+    assert s["line_items.0.quantity"].confidence == 1.0

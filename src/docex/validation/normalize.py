@@ -91,9 +91,14 @@ def parse_number(value: str | int | float | Decimal | None) -> Decimal | None:
 
 
 def parse_rate(value: str | int | float | Decimal | None) -> Decimal | None:
-    """Read a tax rate: `11%`, `0.11` and `11` all mean 0.11."""
+    """Read a tax rate: `11%`, `0.11` and `11` all mean 0.11.
+
+    A `%` sign always means percent; without one, values of 1 or more are percentages too
+    (a 100% tax rate is not a realistic reading of `1`).
+    """
     if value is None:
         return None
+    percent = isinstance(value, str) and "%" in value
     if isinstance(value, str):
         text = value.replace("%", "").strip()
         if not text:
@@ -103,7 +108,7 @@ def parse_rate(value: str | int | float | Decimal | None) -> Decimal | None:
         number = parse_number(value)
     if number is None:
         return None
-    if number > 1:
+    if percent or number >= 1:
         number = number / Decimal(100)
     return number.normalize() if number == number.to_integral() else number
 

@@ -158,10 +158,10 @@ def _invoice_rules(d: BaseModel, today: date) -> list[RuleResult]:
         msg = f"total {d.total} != subtotal - discount + tax ({expected})"
         out.append(_rule("R06", "hard", ok, ("subtotal", "discount", "tax_amount", "total"), msg))
 
-    seller_ok = is_valid_npwp(npwp_digits(d.seller_npwp))
-    out.append(
-        _rule("R07", "hard", seller_ok, ("seller_npwp",), f"invalid seller NPWP: {d.seller_npwp!r}")
-    )
+    if d.seller_npwp is not None:  # a missing NPWP is reported by R01
+        seller_ok = is_valid_npwp(npwp_digits(d.seller_npwp))
+        msg = f"invalid seller NPWP: {d.seller_npwp!r}"
+        out.append(_rule("R07", "hard", seller_ok, ("seller_npwp",), msg))
     if d.buyer_npwp is not None:
         buyer_ok = is_valid_npwp(npwp_digits(d.buyer_npwp))
         out.append(
@@ -231,9 +231,9 @@ def _receipt_rules(d: BaseModel) -> list[RuleResult]:
 
 def validate(raw: dict | None, doc_type: DocType, today: date) -> ValidationOutcome:
     draft, results = build_draft(raw, doc_type)
-    results.append(_required(draft, doc_type))
     if doc_type == "invoice":
+        results.append(_required(draft, doc_type))
         results.extend(_invoice_rules(draft, today))
-    else:
+    else:  # receipts: R20 is the required-field rule (the receipt's only one is `total`)
         results.extend(_receipt_rules(draft))
     return ValidationOutcome(draft=draft, results=results)

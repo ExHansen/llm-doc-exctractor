@@ -158,6 +158,7 @@ REQUIRED_FIELDS: dict[DocType, tuple[str, ...]] = {
         "invoice_number",
         "invoice_date",
         "seller_name",
+        "seller_npwp",
         "buyer_name",
         "subtotal",
         "tax_base",

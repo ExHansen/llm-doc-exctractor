@@ -102,3 +102,10 @@ def test_leading_zero_group_is_decimal_not_thousands(raw, expected):
 
 def test_rate_with_trailing_zero():
     assert parse_rate("0.110") == Decimal("0.11")
+
+
+@pytest.mark.parametrize(
+    "raw,expected", [("1", "0.01"), ("1%", "0.01"), ("1.5", "0.015"), ("100%", "1"), ("0.5", "0.5")]
+)
+def test_rate_percent_heuristic(raw, expected):
+    assert parse_rate(raw) == Decimal(expected)

@@ -11,6 +11,7 @@ from docex.schemas import CRITICAL_FIELDS, FIELD_KINDS, ITEM_FIELD_KINDS, ITEMS_
 from docex.validation.rules import ValidationOutcome
 
 FORMAT_RULES = frozenset({"R00_parse", "R07", "R07B"})
+MISSING_RULES = frozenset({"R01", "R20"})
 FORMAT_PENALTY = 0.3
 HARD_PENALTY = 0.5
 SOFT_PENALTY = 0.8
@@ -44,13 +45,15 @@ def score_fields(
     doc_type: DocType, primary: ValidationOutcome, other_drafts: list[BaseModel]
 ) -> list[FieldScore]:
     dumped = primary.draft.model_dump(mode="json")
-    others = [d.model_dump(mode="json") for d in other_drafts]
+    # Compare attempts on parsed values, so `3` and `3.0` agree.
+    native = primary.draft.model_dump()
+    others = [d.model_dump() for d in other_drafts]
     penalties: dict[str, list[tuple[float, str]]] = {}
     for rule in primary.results:
         if rule.passed:
             continue
         for field in rule.fields:
-            if rule.rule_id == "R01":
+            if rule.rule_id in MISSING_RULES:
                 entry = (0.0, "missing required")
             elif rule.rule_id in FORMAT_RULES:
                 entry = (FORMAT_PENALTY, f"invalid format ({rule.rule_id})")
@@ -68,7 +71,7 @@ def score_fields(
         for factor, reason in penalties.get(path, []):
             confidence *= factor
             reasons.append(reason)
-        if any(_value(other, path) != value for other in others):
+        if any(_value(other, path) != _value(native, path) for other in others):
             confidence *= DISAGREE_PENALTY
             reasons.append("attempts disagree")
         scores.append(FieldScore(path, value, round(confidence, 4), tuple(reasons)))
